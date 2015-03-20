@@ -189,3 +189,48 @@ image(t(approx5)[,nrow(approx5):1], main="b")
 image(t(approx10)[,nrow(approx10):1], main="c")
 image(t(faceData)[,nrow(faceData):1], main="d") ## original data
 
+# colors
+# col=1,2,3 ends in black, red, green
+# colorRamp, colorRampPalette : you can mix colors
+# colors()
+pal <- colorRamp(c("red","blue"))
+# no green in colum 2
+pal(0)
+pal(1)
+pal(0.5)
+pal(seq(0,1,len=10))
+
+pal <- colorRampPalette(c("red","yellow"))
+pal(2)
+pal(10)
+#FF0000 max red, no green, no blue
+# this makes a shade from red to yellow (blue doesn't come in)
+
+# <RColorBrewer package>
+library(RColorBrewer)
+# Sequential : 0 to plus (light in 0)
+# Diverging : minus to plus (light in the middle)
+# Qualatative : category (theme)
+
+cols <- brewer.pal(3, "BuGn")
+# first is the number of colors
+# second is the palette name (look up in ?brewer.pal)
+cols
+pal <- colorRampPalette(cols)
+par(mfrow=c(1,1))
+image(volcano, col=pal(20))
+
+# good when you use smoothScatter
+x <- rnorm(10000)
+y <- rnorm(10000)
+smoothScatter(x,y)
+smoothScatter(x,y,colramp=pal)
+
+# rgb
+# alpha : transparency
+# colorspace package
+library(colorspace)
+# with out trasparency, hard to see density
+x <- rnorm(1000)
+y <- rnorm(1000)
+plot(x,y,col=rgb(0,0,0,0.2),pch=19)

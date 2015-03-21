@@ -1,0 +1,75 @@
+---
+title: "week2"
+output: html_document
+---
+
+Markdown
+### heading
+# Heading
+## Secondary Heading
+### even smaller heading
+
+### Unordered lists
+- first
+- second
+
+### Ordered lists
+1. First
+3. Third
+2. Second
+
+Doesn't matter which order you lay them out
+
+### Syntax
+#### Links
+[RStudio](http://www.rstudio.com/)
+
+#### Advance Links  
+I spend so much time reading [Simply Statistics][1]!  
+
+  [1]: http://simplystatistics.org/ "Simply Statistics"
+
+Here's an inline link to [Google](http://www.google.com/).
+Here's a reference-style link to [Google][1].
+Here's a very readable link to [Yahoo!][yahoo].
+
+  [1]: http://www.google.com/
+  [yahoo]: http://www.yahoo.com/
+
+Here's a <span class="hi">[poorly-named link](http://www.google.com/ "Google")</span>.
+Never write "[click here][^2]".
+Visit [us][web].
+
+  [^2]: http://www.w3.org/QA/Tips/noClickHere (Advice against the phrase "click here")    
+   
+  [web]: http://stackoverflow.com/ "Stack Overflow"
+  
+#### New lines
+two spaces  create a new line
+
+### What is markdown?  
+- you can concentrate on the content  
+- r markdown is markdown for r, we'll use knitr
+
+
+
+```{r}
+library(datasets)
+summary(airquality)
+```
+
+Let's make a plot of the data
+
+```{r, echo=TRUE}
+plot(airquality)
+```
+
+Here's a regression model of ozone, wind, solar radiation, and temperature
+
+```{r}
+library(stats)
+fit <- lm(Ozone ~ Wind + Solar.R + Temp, data = airquality)
+summary(fit)
+```
+
+

@@ -15,4 +15,4 @@ vignettes/*.pdf
 
 # data files
 data/*
-figures/*
+figure/*

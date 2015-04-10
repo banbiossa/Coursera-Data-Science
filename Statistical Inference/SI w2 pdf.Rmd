@@ -1,0 +1,36 @@
+---
+title: "Statistical Inference week2"
+output: pdf_document
+---
+
+### Variance
+
+Var(x) = E[(x - mu)^2] = E[X^2] - E[x]^2
+
+Flip a coin with probability p
+E(x) = p
+E(x^2) = p (as 0 is tails and heads is 2)
+V(x) = p - p^2 = p(1-p)
+
+#### Sample  variance
+
+s^2 = Sigma(i-1) (x_i - x_bar) / n-1
+
+This is also a random value, that should estimate the original variance  
+If you sample enough and get the sample variance, it should center at the varience  
+
+Variance of 10 die rolls should be 2.92. If you do it enough, it will center around 2.92.
+
+Why n-1? That makes it unbiased.
+
+E(x_bar) = mu  
+Var(x_bar) = sigma ^ 2 / n
+
+Variance of the sample mean is s = sigma ^ 2 / n  
+- The logical estimate is s^2/n
+- the logical estimate of the standard error is S/route(n)
+
+Standard distribtion has variance 1. sample of n should have variance 1/route(n)
+
+```{r variacne}
+

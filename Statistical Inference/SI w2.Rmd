@@ -1,0 +1,335 @@
+---
+title: "Statistical Inference week2"
+output: html_document
+---
+
+### Variance
+
+Var(x) = E[(x - mu)^2] = E[X^2] - E[x]^2
+
+Flip a coin with probability p
+E(x) = p
+E(x^2) = p (as 0 is tails and heads is 2)
+V(x) = p - p^2 = p(1-p)
+
+#### Sample  variance
+
+s^2 = Sigma(i-1) (x_i - x_bar) / n-1
+
+This is also a random value, that should estimate the original variance  
+If you sample enough and get the sample variance, it should center at the varience  
+
+Variance of 10 die rolls should be 2.92. If you do it enough, it will center around 2.92.
+
+Why n-1? That makes it unbiased.
+
+E(x_bar) = mu  
+Var(x_bar) = sigma ^ 2 / n
+
+Variance of the sample mean is s = sigma ^ 2 / n  
+- The logical estimate is s^2/n
+- the logical estimate of the standard error is S/route(n)
+
+Standard distribtion has variance 1. sample of n should have variance 1/route(n)
+
+```{r variacne}
+nosim <- 1000
+n <- 10
+sd(apply(matrix(rnorm(nosim * n), nosim), 1, mean))
+# 1 indicates rows in a matrix
+dim(matrix(rnorm(nosim * n), nosim))
+1/sqrt(n)
+```
+
+Standard uniforms, a flat line, variance of 1/12
+
+```{r standard uniform variance}
+nosim <- 1000
+n <- 10
+sd(apply(matrix(runif(nosim*n), nosim), 1, mean))
+1 / sqrt(12 * n)
+```
+
+Possion 4 has a variance of 4, sd should be 2/route(n)
+
+```{r possion sample variance}
+nosim <- 1000
+n < 10
+sd(apply(matrix(rpois(nosim * n, 4), nosim), 1, mean))
+2/ sqrt(n)
+```
+
+Coin flips, variance 0.25, should be 1/2sqrt(n)
+
+```{r coin flips sample variance}
+nosim <- 1000
+n <- 10
+sd(apply(matrix(sample(0:1, nosim * n, replace = T), nosim), 1, mean))
+1/(2 * sqrt(n))
+```
+
+data example
+
+```{r father son}
+library(UsingR); data(father.son);
+x <- father.son$sheight
+n <- length(x)
+hist(x)
+round(c(var(x), var(x)/n, sd(x), sd(x)/sqrt(n)), 2)
+```
+
+## Common distributions
+
+### Bernoulli distribution
+
+flipping a coin with prob = p  
+mean : p  
+variance: p(1-p)  
+mass function: P(X = x) = p^x * (1 - p) ^ n-x
+
+### Bionmial trials
+
+total number of heads on a coin  
+P(X = x) = nCx p^x * (1 - p)^n-x
+
+7 are girls out of 8 children, what's the probability of getting 7 or more  
+```{r binom}
+choose(8,7) * .5 ^ 8 + choose(8,8) * .5^8
+pbinom(6, size = 8, prob = .5, lower.tail = F)
+```
+
+### Normal distruibution
+
+E(x) = mu  
+Var(x) = sigma ^ 2  
+Written as X~N(mu, sigma)
+
+mu = 0, sigma = 1 for a standard normal distruibution
+
+All normal distruibutions are the same shape, just adjust mu and sigma  
+[-1, 1] = 68%  
+[-2, 2] = 95%  
+[-3, 3] = 99% 
+
+X ~ N(mu, sigma) -> (X - mu)/sigma ~ N(0,1)  
+X~N(0,1) -> mu + sigma * X ~ N(mu, sigma)
+
+1. 68%, 95%, 99% are from 1,2,3 standard deviations from the mean
+2. -1.28, -1.645, -1.96 and -2.33 are the 10th, 5th, 2.5th, 1st percentiles 
+3. 1.28, 1.645, 1.96 and 2.33 are the 90th, 95th, 97.5th and 99th percentiles
+
+what's the 95th quantile?
+```{r 95th quantile}
+qnorm(.95)
+```
+
+what's the probability that N(mu, sigma^2) is larger than x  
+pnorm(x, lower.tail = F)
+conceptualy, convert
+
+say, 1020 clicks per day, 1160 clicks, v = 50
+(1160 - 1020) / 50 = 2.8 so not very likely
+
+```{r clicks}
+pnorm(1160, mean = 1020, sd = 50, lower.tail = F)
+pnorm(2.8, lower.tail = F)
+```
+
+quantile calculation, 75% of days have fewer clicks than
+50% are lower than 1020
+84% are lower than 1020 + 50
+
+```{r clicks quantile}
+qnorm(0.75, mean = 1020, sd = 50)
+```
+
+### Possion distribution
+
+used to model counts  
+P(X = x: lamda) = lamda^x * e(-lamda) / x!  
+
+mean: lambda
+variance: lambda
+
+- modeling count data
+- modeling contingency tables
+- can be used when n is large and p is small
+
+X ~ Possion(lamda * t)  
+t is for time
+
+2.5 people per hour at a bus stop, only saw 3 in 4 hours
+```{r possion sample}
+ppois(3, lambda = 2.5 * 4)
+```
+
+X ~ Binomial(n,p)  
+lambda = np  
+n is large  
+p is small  
+
+coin pecentage 0.01, 500 times
+2 or few successs
+
+```{r pois coin}
+pbinom(2, size = 500, prob = 0.01)
+ppois(2, lambda = 500 * 0.01)
+```
+
+## A trip to Asymtopia
+
+Where you have an infinite amount of data  
+Law of large numbers
+
+```{r large numbers}
+n <- 1000
+means <- cumsum(rnorm(n))/(1:n)
+plot(means)
+means <- cumsum(sample(0:1, n, replace = T))/(1:n)
+plot(means)
+```
+
+An estimator is consistent if it converges to what you what to estimate
+
+### The central limit theorem
+
+Estimate - Mean of estimate / Std. Err. of estimate  
+has a distruibution like that of a standard normal for large n
+
+e.g. standard die  
+E(x) = 3.5  
+V(x) = 2.92  
+SE sqrt(2.92/n) = 1.71/sqrt(n)
+
+it becomes a bell curve
+
+```{r dice bell curve}
+n <- 10
+nosim <- 1000
+a <- integer(nosim)
+for(i in 1:nosim){
+        b <-  mean(ceil(runif(n, 0, 6)))
+        a[i] <- (b - 3.5)/(1.71/sqrt(n))
+}
+par(mfrow=c(1,3))
+hist(a)
+n <- 20
+for(i in 1:nosim){
+        b <-  mean(ceil(runif(n, 0, 6)))
+        a[i] <- (b - 3.5)/(1.71/sqrt(n))
+}
+hist(a)
+n <- 30
+for(i in 1:nosim){
+        b <-  mean(ceil(runif(n, 0, 6)))
+        a[i] <- (b - 3.5)/(1.71/sqrt(n))
+}
+hist(a)
+```
+
+#### use a coin
+
+E(x) = p  
+V(x) = p(1-p)  
+SE sqrt(p(1-p)/n)
+
+p^hat - p / sqrt(p(1-p)/n)
+
+if the coin is biased, it 'll take more time
+
+### Confidence intervals
+
+```{r father son confidence}
+library(UsingR)
+data(father.son)
+x <- father.son$sheight
+(mean(x) + c(-1,1) * qnorm(0.975) * sd(x)/sqrt(length(x)))/12 # in inches
+```
+
+coins  
+sigma ^2 = p(1-p)  
+
+#### Wald
+
+for binominal stuff  
+p_hat +_ sqrt(n) is a good assumtion for a 95% interval
+
+you got 56 out of a 100.   
+the 95% is 46 to 66.
+
+```{r interval}
+0.56 + c(-1,1) * qnorm(0.975) * sqrt(0.56 * 0.44/100)
+binom.test(56,100)$conf.int
+```
+
+how good is the Wald
+
+```{r simulation}
+n <- 20
+pvals <- seq(0.1,0.9,by=0.05) #true value
+nosim <- 1000
+coverage <- sapply(pvals,function(p){
+        phats <- rbinom(nosim, prob = p, size = n)/n
+        ll <- phats - qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        ul <- phats + qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        mean(ll < p & ul > p)
+})
+par(mfrow=c(1,1))
+plot(pvals,coverage)
+lines(pvals,coverage)
+### no where near 95%
+### add 2 to both success and failure
+n <- 100
+pvals <- seq(0.1,0.9,by=0.05) #true value
+nosim <- 1000
+coverage <- sapply(pvals,function(p){
+        phats <- rbinom(nosim, prob = p, size = n)/n
+        ll <- phats - qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        ul <- phats + qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        mean(ll < p & ul > p)
+})
+par(mfrow=c(1,1))
+plot(pvals,coverage)
+lines(pvals,coverage)
+n <- 20
+pvals <- seq(0.1,0.9,by=0.05) #true value
+nosim <- 1000
+coverage <- sapply(pvals,function(p){
+        phats <- (rbinom(nosim, prob = p, size = n) + 2)/(n+4)
+        ll <- phats - qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        ul <- phats + qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        mean(ll < p & ul > p)
+})
+par(mfrow=c(1,1))
+plot(pvals,coverage)
+lines(pvals,coverage)
+```
+
+A nuclear pump failed 5 times out of 94.32 days. give the 95% confidence interval for the failure rate.  
+X ~ Possion(lambda*t)  
+Estimate lamdahat = X/t  
+V(lambdahat) = lambda/t  
+lambda/t is our varience estimate
+
+```{r nuclear pump}
+x <- 5
+t <- 94.32
+lambda <- x/t
+round(lambda + c(-1,1) * qnorm(0.975) * sqrt(lambda/t), 3)
+poisson.test(x, T=94.32)$conf
+```
+
+do a test
+
+```{r poisson coverage}
+lambdavals <- seq(0.005, 0.1, by = 0.01)
+nosim <- 1000
+t <- 100
+coverage <- sapply(lambdavals, function(lambda){
+        lhats <- rpois(nosim, lambda = lambda *t)/t
+        ll <- lhats - qnorm(0.975) * sqrt(lhats/t)
+        ul <- lhats + qnorm(0.975) * sqrt(lhats/t)
+        mean(ll < lambda & ul > lambda)
+})
+plot(coverage)
+lines(coverage)

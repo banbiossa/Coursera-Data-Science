@@ -1,0 +1,116 @@
+---
+title: "Statistical Inference week1"
+output: html_document
+---
+
+#### Probability density functions
+This is the probability density for a triangle, we use as a sample.
+
+```{r probability density functions}
+pbeta(c(0.4, 0.5, 0.6), 2, 1)
+```
+
+#### Quantiles  
+- 95% percent quantile: about 95% of the density lies below that point
+- q stands for quantile
+
+```{r quantiles}
+qbeta(0.5, 2, 1)
+```
+
+## Finding the center of mass
+
+```{r mass}
+library(UsingR); data(galton); library(ggplot2); library(reshape2)
+longGalton <- melt(galton, measure.vars = c("child", "parent"))
+g <- ggplot(longGalton, aes(x = value)) + geom_histogram(aes(y = ..density..,  fill = variable), binwidth=1, colour = "black") + geom_density(size = 2)
+g <- g + facet_grid(. ~ variable)
+g
+```
+
+## Using Manipulate
+
+```{r manipulate}
+library(manipulate)
+library(ggplot2)
+myHist <- function(mu){
+    g <- ggplot(galton, aes(x = child))
+    g <- g + geom_histogram(fill = "salmon", 
+      binwidth=1, aes(y = ..density..), colour = "black")
+    g <- g + geom_density(size = 2)
+    g <- g + geom_vline(xintercept = mu, size = 2)
+    mse <- round(mean((galton$child - mu)^2), 3)  
+    g <- g + labs(title = paste('mu = ', mu, ' MSE = ', mse))
+    g
+}
+manipulate(myHist(mu), mu = slider(62, 74, step = 0.5))
+```
+
+The MSE is lowest at the center of mass
+
+## Unbiased
+
+If the distribtution is inbiased, the mean of the average of random samples will be centered at the original distruibution.
+
+```{r test}
+x <- 1:4
+p <- x/sum(x)
+temp <- rbind(x, p)
+rownames(temp) <- c("X", "Prob")
+temp
+sum(x*p)
+
+0.3 * 0.75 / (0.3 * 0.75 + 0.7 * 0.52)
+```
+
+# Week 2
+
+```{r confidence intervals}
+library(UsingR)
+data(father.son)
+x <- father.son$sheight
+(mean(x) + c(-1, 1) * qnorm(0.975) * sd(x)/sqrt(length(x)))/12
+```
+
+```{r binom}
+binom.test(56, 100)$conf.int
+```
+
+
+```{r simulation}
+n <- 20
+pvals <- seq(0.1, 0.9, by=0.05)
+nosim <- 1000
+coverage <- sapply(pvals, function(p){
+        phats <- rbinom(nosim, prob = p, size = n)/n
+        ll <- phats - qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        ul <- phats + qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        mean(ll < p & ul > p)
+})
+```
+
+The plot isn't so good
+
+```{r better simulation}
+n <- 100
+pvals <- seq(0.1, 0.9, by=0.05)
+nosim <- 1000
+coverage <- sapply(pvals, function(p){
+        phats <- rbinom(nosim, prob = p, size = n)/n
+        ll <- phats - qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        ul <- phats + qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        mean(ll < p & ul > p)
+})
+```
+
+```{r change phat}
+n <- 20
+pvals <- seq(0.1, 0.9, by=0.05)
+nosim <- 1000
+coverage <- sapply(pvals, function(p){
+        phats <- (rbinom(nosim, prob = p, size = n) + 2)/(n + 4)
+        ll <- phats - qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        ul <- phats + qnorm(0.975) * sqrt(phats * (1 - phats)/n)
+        mean(ll < p & ul > p)
+})
+```

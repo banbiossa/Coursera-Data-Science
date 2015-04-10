@@ -1,0 +1,33 @@
+---
+title: "week4"
+output: html_document
+---
+
+## Caching Computations
+
+- The cacher package allows you to give people your code and data.
+- It'll create a source file, data file and meta data file.
+
+```{r clonecache}
+library(cacher) # not available
+clonechache(id = "092d")
+showfiles()
+load()
+loadcache()
+ls()
+```
+
+## Air Pollution  
+- Look more into PM10
+- NMMAPS is one of the most reproducible studies
+- One reproduced study found nickel to be harmful
+- Too simple to be true. Turned out 3 counties in NYC drove them. 
+
+## High Throughput Biology
+- Lecture by Keith Baggely
+- Genomic signiatures and chemotherapic reactivity
+- The process is often not described well
+
+
+
+

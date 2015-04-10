@@ -1,0 +1,136 @@
+---
+title: "Statistical Inference week3"
+output: pdf_document
+---
+
+## T distruibution
+
+$$ 
+\frac{\overline{X} - \mu} {S / \sqrt{n}}
+$$
+
+- will be a t distribtion, not a regular distruibution  
+- t always has a wider bit at the edges.  
+- In large scale, it's nearly the same
+- for poisson, other stuff are available
+
+## Sleep data
+
+```{r sleep}
+data(sleep)
+head(sleep)
+library(ggplot2)
+g <- ggplot(sleep, aes(x = group, y = extra, group = factor(ID)))
+g <- g + geom_line(size = 1, aes(colour = ID)) + geom_point(size =10, pch = 21, fill = "salmon", alpha = .5)
+g
+
+g1 <- sleep$extra[1:10]; g2 <- sleep$extra[11:20]
+difference <- g2 - g1
+mn <- mean(difference); s <- sd(difference); n <- 10
+
+mn + c(-1,1) * qt(.975, n-1)* s / sqrt(n)
+t.test(difference)
+t.test(g2, g1, paired = T)
+t.test(extra ~ I(relevel(group,2)), paired = T, data = sleep)
+```
+
+Checking the 95% confidence interval for the mean of the paried test.  
+The t test in 4 sentences.
+
+## Independent group t confidence trials
+
+$$
+\overline{Y} - \overline{X} \pm t_{n_x + n_y -2, 1-\alpha/2} S_p (\frac{1}{n_x} + \frac{1}{n_y})^{1/2}
+$$
+
+This is what happens for 2 groups
+
+The variance
+$$
+S^2_p = \{(n_x - 1)S^2_x + (n_y - 1)S^2_y \} / (n_x + n_y - 2)
+$$
+
+- this assumes constant variance among groups
+
+calculate from a book  
+8 oral contraceptive users, 21 controlls  
+Xoc = 132.86, soc = 15.34
+Xc = 127.44, sc = 18.23
+
+```{r blood pressure}
+sp <- sqrt((7 * 15.34^2 + 20*18.23^2) / (8 + 21 - 2))
+132.86 - 127.44 + c(-1,1) * qt(.975, 27) * sp * (1/8 + 1/21)^.5
+```
+
+The answer is [-9.52, 20.4]  
+This contains 0, you can't rule out that they're the same
+
+#### Sleep patients again
+
+```{r sleep as grouped}
+n1 <- length(g1); n2 <- length(g2)
+sp <- sqrt( ((n1 - 1) * sd(g1) ^2 + (n2 - 1) * sd(g2)^2) / (n1 + n2 - 2))
+md <- mean(g2) - mean(g1)
+semd <- sp * sqrt(1/n1 + 1/n2)
+rbind(
+        md + c(-1,1) * qt(.975, n1 + n2 -2) * semd,
+        t.test(g2, g1, paired = F, var.equal = T)$conf,
+        t.test(g2, g1, paired = T)$conf
+)
+```
+
+The answer  
+           [,1]     [,2]  
+[1,] -0.2038740 3.363874  
+[2,] -0.2038740 3.363874  
+[3,]  0.7001142 2.459886  
+
+In a paired test, if you take g2 - g1, the answer is the 3rd row.
+
+```{r chickweight}
+library(datasets); data(ChickWeight); library(reshape2)
+## define weight gain or loss
+wideCW <- dcast(ChickWeight, Diet + Chick ~ Time, value.var = "weight")
+names(wideCW)[-(1:2)] <- paste("time", names(wideCW)[-(1:2)], sep = "")
+library(dplyr)
+wideCW <- mutate(wideCW, gain = time21 - time0)
+
+```
+
+### Plotting the raw data
+```{r chickplot}
+g <- ggplot(ChickWeight, aes(x = Time, y = weight, 
+                             colour = Diet, group = Chick))
+g <- g + geom_line()
+g <- g + stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1, col = "black")
+g <- g + facet_grid(. ~ Diet)
+g
+```
+
+The 4 the diet looks faster. Let's check that.
+
+```{r gain by diet}
+g <- ggplot(wideCW, aes(x = factor(Diet), y = gain, fill = factor(Diet)))
+g <- g + geom_violin(col = "black", size = 2)
+g
+```
+
+A t interval
+
+```{r chick t}
+wideCW14 <- subset(wideCW, Diet %in% c(1,4))
+rbind(
+        t.test(gain ~ Diet, paired = F, var.equal = T, data = wideCW14)$conf,
+        t.test(gain ~ Diet, paried = F, var.equal = F, data = wideCW14)$conf
+)
+```
+
+#### Unequal Variances
+
+$$
+\overline{Y} - \overline{X} \pm t_{df} * (\frac{s^2_x}{n_x} + \frac{s^2_y}{n_y}) ^ {1/2}
+$$
+
+t.test(var.equal=F) does the job
+
+

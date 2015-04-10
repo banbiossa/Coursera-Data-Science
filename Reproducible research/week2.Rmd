@@ -72,4 +72,81 @@ fit <- lm(Ozone ~ Wind + Solar.R + Temp, data = airquality)
 summary(fit)
 ```
 
+### Literate programming
 
+knitr is good for most things, but not for long/specific documents
+
+#### complicated way of knitting
+```{r knitting, echo=TRUE, error=TRUE, eval=FALSE}
+library(knitr)
+setwd("/Users//shota/git//Coursera-Data-Science/Reproducible research/")
+knit2html("week2.Rmd")
+browseURL("week2.html")
+```
+
+the produced markdown document includes the result in the console
+
+#### hiding results
+```{r hidden, echo=FALSE, results='hide'}
+set.seed(1)
+x <- rnorm(100)
+mean(x)
+```
+
+
+#### Inline text computations
+```{r computetime, echo=FALSE}
+time <- format(Sys.time(), "%a %b %d %X %Y")
+rand <- rnorm(1)
+```
+
+The current time is `r time`. My favorite random number is `r rand`.
+
+#### Incorporating graphics
+```{r graphics}
+x <- rnorm(100)
+y <- x + rnorm(100, sd=0.5)
+```
+
+Here's the scatter plot
+```{r scatterplot, fig.height=4}
+par(mar=c(5,4,2,1), las=1)
+plot(x, y, main = "My simulated data")
+```
+
+### Making tables
+```{r fitmodel}
+library(datasets)
+data(airquality)
+fit <- lm(Ozone ~ Wind + Temp + Solar.R, data = airquality)
+```
+
+Here is a table of regression coefficients
+```{r showtable, results='asis'}
+library(xtable)
+xt <- xtable(summary(fit))
+print(xt, type = "html")
+```
+
+### Setting Global options
+```{r setoptions, echo=FALSE}
+library(knitr)
+opts_chunk$set(echo = FALSE, results = "hide")
+```
+First simulated data
+```{r simulateddata, echo=TRUE}
+x <- rnorm(100)
+y <- x + rnorm(100, sd=0.5)
+```
+
+Here's the scatterplot
+
+```{r scatterplot2, fig.height=4}
+par(mar=c(5,4,2,1), las=1)
+plot(x, y, main = "My simulated data")
+```
+
+### Caching computations
+- when a computation takes a long time
+- cache = TRUE on a chunk caches it
+- results are loaded after the first run

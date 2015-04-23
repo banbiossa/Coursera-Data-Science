@@ -1,0 +1,223 @@
+---
+title: "Statistical Inference week3 again"
+output: pdf_document
+---
+
+## T confidence intervals
+
+Est +- TQ * SEest
+
+Student t distribution
+
+X - mu / (S/sqrt(n))
+
+### Sleep data  
+Comes from Gosset's Biometrika paper.  
+Shows the increase hours in patients sleeping time on two soporic drugs.
+
+```{r sleep}
+data(sleep)
+head(sleep)
+```
+
+#### Plotting the data
+```{r plot}
+library(ggplot2)
+g <- ggplot(sleep, aes(x = group, y = extra, group = factor(ID)))
+g <- g + geom_line(size = 1, aes(colour = ID)) + geom_point(size =10, pch = 21, fill = "salmon", alpha = .5)
+g
+```
+
+The difference comparing group 1 and group 2, versus comparing the differnce of each subject (as it should be)
+
+#### Results
+```{r results}
+g1 <- sleep$extra[1 : 10]; g2 <- sleep$extra[11 : 20]
+difference <- g2 - g1
+mn <- mean(difference); s <- sd(difference); n <- 10
+```
+
+```{r t quantile}
+mn + c(-1,1) * qt(0.975,n-1)*s/sqrt(n)
+t.test(difference)
+t.test(g2,g1, paired = T)
+t.test(extra ~ I(relevel(group,2)), paired = T, data = sleep)
+```
+
+### Independent group t intervals
+
+Suppose one group recived the drug, the other the placebo.
+
+This isn't a paired test, as the subjets are different in each group.
+
+In this case, 
+$$ \overline{Y} - \overline{X} \pm t_{n_x + n_y -2,1-2/\alpha} S_p \Bigl( \frac{1}{n_x} + \frac{1}{n_y} \Bigr) ^{1/2}$$
+
+$$S_p^2 = \{(n_x - 1)S_x^2 + (n_y - 1)S_y^2 \} / (n_x + n_y -2)$$
+
+```{r oc}
+sp <- sqrt((7*15.34^2 + 20*18.23^2)/(8+21-2))
+132.86 - 127.44 + c(-1,1) * qt(0.975, 8+21-2) * sp * (1/8+1/21)^.5
+```
+
+Act as if the sleep group were independent trials
+
+```{r independt sleep}
+n1 <- length(g1); n2 <- length(g2)
+sp <- sqrt(((n1-1)*sd(g1)^2 + (n2-1)*sd(g2)^2)/(n1+n2-2))
+md <- mean(g2) - mean(g1)
+semd <- sp * sqrt(1/n1 + 1/n2)
+md + c(-1,1)*qt(.975, n1 + n2 -2) * semd
+t.test(g2,g1,paired = T)
+t.test(g2,g1,paired = F,var.equal = T)
+```
+
+
+#### Chickweight
+
+```{r chickweight}
+library(datasets); data(ChickWeight); library(reshape2)
+#head(ChickWeight)
+#table(ChickWeight)
+#summary(ChickWeight)
+wideCW <- dcast(ChickWeight, Diet + Chick ~ Time, value.var = "weight")
+names(wideCW)[-(1:2)] <- paste("time", names(wideCW[-(1:2)]), sep="")
+#head(wideCW)
+library(dplyr)
+wideCW <- mutate(wideCW, gain = time21 - time0)
+```
+
+#### Plotting
+```{r plot chick}
+g <- ggplot(ChickWeight, aes(x = Time, y = weight, 
+                             colour = Diet, group = Chick))
+g <- g + geom_line()
+g <- g + stat_summary(aes(group = 1), geom = "line", fun.y = mean, size = 1, col = "black")
+g <- g + facet_grid(. ~ Diet)
+g
+```
+
+Is the 4th diet faster  than the 1st?
+
+```{r violin}
+g <- ggplot(wideCW, aes(x = factor(Diet), y = gain, fill = factor(Diet)))
+g <- g + geom_violin(col = "black", size = 2)
+g
+```
+
+```{r wideCW}
+wideCW14 <- subset(wideCW, Diet %in% c(1,4))
+rbind(
+        t.test(gain~Diet, paired = F, var.equal = T, data = wideCW14)$conf,
+        t.test(gain~Diet, paired = F, var.equal = F, data = wideCW14)$conf
+)
+```
+
+#### differnet variance in two groups
+$$ \overline{Y} - \overline{X} \pm t_{df} \times \Bigl( \frac{s_x^2}{n_x} + \frac{s_y^2}{n_y} \Bigr)^{1/2}$$
+
+$$ df = \frac{(S^2_x/n_x + S^2_y/n_y)^2}{\Bigl( \frac{S^2_x}{n_x} \Bigr)^2/(n_x -1 ) + \Bigl( \frac{S^2_y}{n_y} \Bigr)^2 /(n_y -1 )}$$
+
+In R
+```{r t.test(var.equal = F)}
+132.86 - 127.44 + c(-1,1) *2.13 * (15.34^2/8 + 18.23^2/21)^(1/2)
+# t.test(..., var.equal = F)
+```
+
+
+#### Hypothesis testing  
+
+5% is a benchmark.
+sd = 10, n = 100, so sd' = 1  
+if the average is 32, it's larger than 30 + 1.645  
+usually, you do the $$\sqrt{n} (\overline{X} - \mu_0)/ s > Z_{1-\alpha}$$
+
+
+```{r testing}
+qt(.95,15)
+library(UsingR); data(father.son)
+t.test(father.son$sheight - father.son$fheight)
+```
+
+This was a paired test.
+
+#### two group t testing
+
+```{r 2 group t testing}
+library(datasets); data(ChickWeight); library(reshape2)
+wideCW <- dcast(ChickWeight, Diet + Chick ~ Time, value.var = "weight")
+names(wideCW)[-c(1:2)] <- paste("time", names(wideCW)[-(1:2)], sep = "")
+library(dplyr)
+wideCW <- mutate(wideCW,
+                 gain = time21 - time0
+)
+wideCW14 <- subset(wideCW, Diet %in% c(1,4))
+t.test(gain ~ Diet, paired = F, var.equal = T, data = wideCW14)
+t.test(gain ~ Diet, paired = F, var.equal = F, data = wideCW14)
+```
+
+#### Exact binomial test  
+
+### P values
+
+If the p-value is less than $$\alpha$$ you reject the null hypothesis
+
+```{r p values}
+pt(2.5,15,lower.tail = F)
+choose(8,7) * 0.5^8 + choose(8,8) * 0.5^8
+pbinom(6, size = 8, prob = 0.5, lower.tail = F)
+ppois(9,5, lower.tail = F)
+```
+
+#### Test
+
+```{r test}
+mean <- 1100
+sd <- 30
+n <- 9
+?t.test
+mean + c(-1,1) * sd/sqrt(n) * qt(0.975,n-1)
+
+
+n <- 9
+mean <- -2
+sd <- mean * -1 * sqrt(n) / qt(0.975,n-1)
+sd
+
+
+n <- 10
+nh <- 3
+nv <- 0.6
+oh <- 5
+ov <- 0.68
+
+sp <- function(nx, sx, ny, sy){
+        sqrt(((nx - 1)*sx^2 + (ny - 1)*sy^2)/(nx + ny -2))
+}
+sp_here <- sp(10, sqrt(nv), 10, sqrt(ov))
+
+nh - oh + c(-1,1) * qt(0.975, 18) * sp_here * sqrt(1/10 + 1/10)
+nh - oh + c(-1,1) * qt(0.95, 18) * sp_here * sqrt(1/10 + 1/10)
+
+n <- 9
+t <- -3
+p <- 1
+vt <- 1.5
+vp <- 1.8
+
+sp_here <- sp(n, vt, n, vp)
+t - p + c(-1,1) * qt(0.95, 16) * sp_here * sqrt(1/9 + 1/9)
+t - p + c(-1,1) * qt(0.9, 16) * sp_here * sqrt(1/9 + 1/9)
+
+n <- 100
+nw <- 4
+nsd <- 0.5
+ow <- 6
+osd <- 2
+
+df <- function(sx, nx, sy, ny){
+        (sx^2/nx + sy^2/ny)^2 / {(sx^2/nx)^2/(nx - 1) + (sy^2/ny)^2/(ny - 1)}
+}
+df_here <- df(nsd, n, osd, n)
+ow - nw + c(-1,1) * qt(0.975, df_here) * sqrt(nsd^2/n + osd^2/n)
+```

@@ -1,0 +1,146 @@
+---
+title: "Statistical Inference week4"
+output: pdf_document
+---
+
+### Power  
+
+the probability of rejecting the null hypothesis when false 1 - beta
+
+beta is 2nd error.
+
+```{r power, echo=FALSE, error=TRUE}
+mu0 = 30
+mua = 32
+n = 16
+sigma = 4
+alpha = 0.05
+z <- qnorm(1 - alpha)
+pnorm(mu0 + z*sigma/sqrt(n), mean = mua, sd = sigma/sqrt(n), lower.tail = F)
+
+mu0 = 30
+mua = 32
+sigma = 4
+n = 16
+z <- qnorm(1-alpha)
+pnorm(mu0 + z*sigma/sqrt(n), mean = mu0, sd = sigma/sqrt(n), lower.tail = F)
+pnorm(mu0 + z*sigma/sqrt(n), mean = mua, sd = sigma/sqrt(n), lower.tail = F)
+
+library(manipulate)
+mu0 = 30
+myplot <- function(sigma, mua, n, alpha){
+        g = ggplot(data.frame(mu = c(27,36)), aes(x = mu))
+        g = g + stat_function(fun = dnorm, geom = "line",
+                              args = list(mean = mu0, sd = sigma/sqrt(n)),
+                              size = 2, col = "red")
+        g = g + stat_function(fun = dnorm, geom = "line",
+                              args = list(mean = mua, sd = sigma/sqrt(n)),
+                              size = 2, col = "blue")
+        xitc = mu0 + qnorm(1-alpha) * sigma /sqrt(n)
+        g = g + geom_vline(xintercept = xitc, size =3)
+        g
+}
+manipulate(
+        myplot(sigma, mua, n, alpha),
+        sigma = slider(1,10, step = 1, initial = 4),
+        mua = slider(30,35, step = 1, initial = 32), 
+        n = slider(1,50, step = 1, initial = 16),
+        alpha = slider(0.01, 0.1, step = 0.01, initial = 0.05)
+        )
+```
+
+Usually you calculate for beta or n, to make a study, or make sure the study will be meaningful in a certain dataset.
+
+#### t-test power
+
+just use power.t.test (non-central t distruibution)
+```{r t-test power}
+power.t.test(n = 16, delta = 2/4, sd = 1, type = "one.sample", alt = "one.sided")$power
+power.t.test(n = 16, delta = 2, sd = 4, type = "one.sample", alt = "one.sided")$power
+power.t.test(n = 16, delta = 100, sd = 200, type = "one.sample", alt = "one.sided")$power
+
+power.t.test(power = 0.8, delta = 2/4, sd = 1, type = "one.sample", alt = "one.sided")$n
+power.t.test(power = 0.8, delta = 2, sd = 4, type = "one.sample", alt = "one.sided")$n
+power.t.test(power = 0.8, delta = 100, sd = 200, type = "one.sample", alt = "one.sided")$n
+```
+
+you need n = 27 to detect a 0.5 differnece in the mean  
+
+### Multiple comparisons
+
+type1 : false positive  
+type2 : false negative
+
+\begin{center}
+\begin{tabular}{ l c c r }
+                        & $\beta = 0 $    & $\beta \neq 0  $& HYPOTHESES \\
+        Claim $\beta = 0 $     & U        & T             & m-R\\
+        Claim$ \beta \neq $0   & V        & S             & R\\
+        Claims          &$ m_0$           & $m - m_0 $      & m\\
+\end{tabular}
+\end{center}
+
+- false positive rate: $$ E \Biggl[ \frac{V}{m_0} \Biggr]$$
+- familiy wise error rate: Pr(V>=1) the probabily of at least one false positive
+- false discovery rate : $$ E \Biggl[ \frac{V}{R} \Biggr]$$
+
+### controlling false positive  
+
+#### Bonferroni correction  
+
+set $$ \alpha_{fwer} = \alpha / m $$
+where m is the number of tests. 
+This is easy to calculate, but may be very conservative.  
+
+### Controlling false discovery rate
+- most popular in genomics, etc.
+- do m tests
+- order p values from smallest to largest $$P_{(1)}, \dots, P_{(m)}$$
+- call any $$P_{(i)} \leq \alpha \times \frac{i}{m}$$ significant
+- this will allow for more false positives
+
+### Example with 10 p-values  
+
+## Adjust the p values  
+- not p values anymore!
+- easier than adjusting alpha
+- eg. p values P_1, ..., P_m
+$$ P_i^{fwer} = max~m \times P_i,1 $$ for each P-value.
+- Then if you call all $$P_i^{fwer} < \alpha $$ significant you will control the FWER.
+
+```{r no true positives}
+set.seed(1010093)
+pValues <- rep(NA, 1000)
+for(i in 1:1000){
+        y <- rnorm(20)
+        x <- rnorm(20)
+        pValues[i] <- summary(lm(y~x))$coeff[2,4]
+}
+# control false positive rate
+sum(pValues<0.05)
+sum(p.adjust(pValues, method = "bonferroni")<0.05)
+sum(p.adjust(pValues, method = "BH")<0.05)
+```
+
+```{r with relationship}
+set.seed(1010093)
+pValues <- rep(NA,1000)
+for(i in 1:1000){
+        x <- rnorm(20)
+        #first 500, beta = 0, last 500 beta = 2
+        if(i<=500){y <- rnorm(20)}else{y <- rnorm(20,mean=2*x)}
+        pValues[i] <- summary(lm(y~x))$coeff[2,4]
+}
+trueStatus <- rep(c("zero","not zero"), each = 500)
+table(pValues < 0.05, trueStatus)
+table(p.adjust(pValues, method = "bonferroni") < 0.05, trueStatus)
+table(p.adjust(pValues, method = "BH")<0.05, trueStatus)
+```
+
+```{r what p method does}
+par(mfrow = c(1,2))
+plot(pValues, p.adjust(pValues, method = "bonferroni"), pch = 19)
+plot(pValues, p.adjust(pValues, method = "BH"), pch = 19)
+```
+
+maybe method = "BY" is good too

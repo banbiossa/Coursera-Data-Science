@@ -144,3 +144,153 @@ plot(pValues, p.adjust(pValues, method = "BH"), pch = 19)
 ```
 
 maybe method = "BY" is good too
+
+# Bootstrapping
+
+Basic idea: when you have only one distruibution, use that over and over to sample randomly, to figure what kind of charestiristics it has. 
+
+```{r dataset}
+library(UsingR)
+data(father.son)
+x <- father.son$sheight
+n <- length(x)
+B <- 10000
+resamples <- matrix(sample(x, n*B, replace = TRUE), B, n)
+resampledMedians <- apply(resamples, 1, median)
+hist(resampledMedians)
+```
+
+## How to do it
+1. resample the whole data
+2. take the mean
+3. do it B times
+
+```{r look further}
+sd(resampledMedians)
+quantile(resampledMedians, c(0.025, 0.975))
+
+library(ggplot2)
+g = ggplot(data.frame(medians = resampledMedians), aes(x = medians))
+g = g + geom_histogram(color = "black", fill = "lightblue", binwidth = 0.05)
+g
+```
+
+- better to take a bootstrap confidence intervals correct for bias
+- "An introduction to bootstrap" is a good place to start
+
+# Permutation tests
+
+This is for comparing groups
+
+- take a data frame with groups
+- sample without the groups
+- was the sample more extreme?
+
+```{r permutation tests}
+data(InsectSprays)
+g = ggplot(InsectSprays, aes(spray, count, fill = spray))
+g = g + geom_boxplot()
+g
+subdata <- InsectSprays[InsectSprays$spray %in% c("B","C"),]
+y <- subdata$count
+group <- as.character(subdata$spray)
+teststat <- function(w,g) mean(w[g=="B"]) - mean(w[g=="C"])
+observedStat <- teststat(y, group)
+permutations <- sapply(1:10000, function(i) teststat(y, sample(group)))
+observedStat
+mean(permutations > observedStat)
+hist(permutations)
+g = ggplot(data.frame(permutations = permutations),
+           aes(permutations))
+g = g + geom_histogram(fill = "lightblue", color = "black", binwidth = 1)
+g = g + geom_vline(xintercept = observedStat, size = 2)
+g
+```
+
+# Quiz
+Subject  Baseline	Week 2
+
+
+a <- scan() 
+1  140  132
+b <- scan()
+2	138	135
+c <- scan()
+3	150	151
+d <- scan()
+4	148	146
+e <- scan()
+5	135	130
+
+data <- rbind(a,b,c,d,e)
+data <- data.frame(data)
+names(data) <- c("subject", "baseline", "week2")
+data
+t.test(data$baseline - data$week2)
+
+
+```{r q22}
+n = 9
+mean = 1100
+sd = 30
+mean + c(-1,1)* qt(0.975,n-1) * sd/sqrt(n)
+mean + c(-1,1)* qt(0.95,n-1) * sd
+```
+
+```{r q3}
+a <- c(0,1,1,1)
+t.test(a)
+a <- a-1/2
+t.test(a)
+?binom.test
+binom.test(3, 4, p = 0.5, alternative = "g")
+```
+
+```{r q4}
+n = 10
+d = 1787
+b = 1/100
+p = n/d
+?pnorm
+?ppois
+ppois(p,b, lower.tail = F)
+poisson.test(n, T = d, r = b, alternative = "l")
+```
+
+### q5  
+- 18 patients, 9 on placebo, 9 on the drug  
+- placebo: 1  sd: 1.8
+- drug: -3  sd: 1.5
+- do a two sided test
+
+```{r two sided t}
+?t.test
+n <- 9
+sdp <- 1.8
+sdd <- 1.5
+mp <- 1
+md <- -3
+sp <- sqrt( ((n - 1) * sdp ^2 + (n - 1) * sdd^2) / (n + n - 2))
+mean <- md - mp
+semd <- sp * sqrt(1/n + 1/n)
+mean + c(-1,1) * qt(.975, n+n -2) * semd
+pt(mean/semd, n+n-2)*2
+mean/semd
+mean
+sp
+semd
+```
+
+### q6
+Researchers would like to conduct a study of 100 healthy adults to detect a four year mean brain volume loss of .01 mm3. Assume that the standard deviation of four year volume loss in this population is .04 mm3. About what would be the power of the study for a 5% one sided test versus a null hypothesis of no volume loss?
+
+```{r test}
+?power.t.test
+power.t.test(n = 100, delta = 0.1,sd = 0.4, sig.level = 0.05, alternative = "one.sided",type = "one.sample")
+```
+
+### q8
+Researchers would like to conduct a study of n healthy adults to detect a four year mean brain volume loss of .01 mm3. Assume that the standard deviation of four year volume loss in this population is .04 mm3. About what would be the value of n needded for 90% power of type one error rate of 5% one sided test versus a null hypothesis of no volume loss?
+
+```{r needed for test}
+power.t.test(delta = 0.1, sd = 0.4, sig.level = 0.05, power = 0.9, alternative = "one.sided", type = "one.sample")

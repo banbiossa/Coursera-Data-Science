@@ -129,3 +129,30 @@ c(beta1, coef(lm(y~x))[2])
 
 # Regression to the mean
 
+- normalize x and y (child and parent height)
+- slope is Cor(Y,X)
+```{r regression to the mean}
+library(UsingR)
+data(father.son)
+y <- (father.son$sheight - mean(father.son$sheight)) / sd(father.son$sheight)
+x <- (father.son$fheight - mean(father.son$fheight)) / sd(father.son$fheight)
+rho <- cor(x,y)
+myPlot <- function(x,y){
+  plot(x,y,
+       xlab = "Father's height, normalized",
+       ylab = "Son's height, normalized",
+       xlim = c(-3,3),
+       ylim = c(-3,3),
+       bg = "lightblue", col = "black", cex = 1.1, pch = 21,
+       frame = FALSE)
+}
+myPlot(x,y)
+abline(0,1) # perfect correlation
+abline(0, rho, lwd = 2) # father predicts son
+abline(0, 1/rho, lwd = 2) # son predicts father
+abline(h =0); abline(v = 0) # no relationship
+?abline
+par(mfrow = c(1,1))
+```
+
+# Quiz

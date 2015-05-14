@@ -110,3 +110,22 @@ $$
 \hat{\beta}_1 = Cor(X,Y)
 $$
 
+## Revisiting Galton's data
+```{r galton again}
+y <- galton$child
+x <- galton$parent
+beta1 <- cor(y,x)*sd(y)/sd(x)
+beta0 <- mean(y) - beta1*mean(x)
+rbind(c(beta0, beta1), coef(lm(y~x)))
+```
+
+## Center the origin
+```{r galton center}
+yc <- y - mean(y)
+xc <- x - mean(x)
+beta1 <- sum(yc*xc)/sum(xc*xc)
+c(beta1, coef(lm(y~x))[2])
+```
+
+# Regression to the mean
+

@@ -234,7 +234,7 @@ n = 9
 mean = 1100
 sd = 30
 mean + c(-1,1)* qt(0.975,n-1) * sd/sqrt(n)
-mean + c(-1,1)* qt(0.95,n-1) * sd
+mean + c(-1,1)* qt(0.95,n-1) * sd/sqrt(n)
 ```
 
 ```{r q3}

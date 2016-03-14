@@ -1,0 +1,330 @@
+---
+title: "Practical machine learning w4"
+output: html_document
+---
+
+# Regularized regression
+- shrink large coeffcients
+```{r regurlarize regression}
+library(ElemStatLearn)
+data(prostate)
+str(prostate)
+```
+
+## model seletion approach : split sampes
+1. divdide into train/test/validate
+2. train, validate, and finally test
+
+## decompose expected prediction error
+- error = irreducible error + bias^2 + variance
+
+## another issue
+```{r small}
+small= prostate[1:5,]
+lm(lpsa ~.,data=small)
+```
+
+## hard threshhold
+- assume linear model
+- say lambda are nonzero coeffcients and check the combinatinos
+
+## regularize for regression
+- if the beta's are unconstrained they might explode
+- PRSS: penalizes too big beta
+
+## ridge regerssion
+- add sum(beta^2)
+
+## coeffcients path
+- increase lambda, and the coeffcients comes to zero
+
+## lambda
+- size of coeffcients
+- lambda zero is least square
+- lambda inf is beta to 0
+
+## Caret
+- ridge
+- lasso
+- relaxo
+
+# combining predictors
+- netflix was a combination of 107 predictors
+
+## basic intuition
+- majority vote accuacy
+- if 0.7 for each, in 5 covariants
+```{r calc}
+10*0.7^3*0.3^2 + 5 * 0.7^4 * 0.3 + 0.7^5
+```
+
+- 99.9% accuracy for 101 independent classifiers
+
+## Example
+```{r wage combine}
+library(ISLR)
+data(Wage)
+library(ggplot2)
+library(caret)
+Wage <- subset(Wage, select=-c(logwage))
+
+# create a building data set and validation set
+inBuild <- createDataPartition(y=Wage$wage,p=0.7,list=F)
+validation <- Wage[-inBuild,]
+buildData <- Wage[inBuild,]
+
+inTrain <- createDataPartition(y=buildData$wage,p=0.7,list=F)
+training <- buildData[inTrain,]
+testing <- buildData[-inTrain,]
+
+dim(training)
+dim(testing)
+dim(validation)
+```
+
+## build two different models
+```{r combine model}
+mod1 <- train(wage ~., method="glm",data=training)
+mod2 <- train(wage ~., method="rf",data=training,trControl=trainControl(method="cv"),number=3)
+
+pred1 <- predict(mod1,testing)
+pred2 <- predict(mod2,testing)
+qplot(pred1, pred2, colour=wage,data=testing)
+```
+
+## combine them
+```{r combine}
+predDF <- data.frame(pred1,pred2,wage=testing$wage)
+combModFit <- train(wage ~.,method="glm",data=predDF)
+combPred <- predict(combModFit,predDF)
+
+sqrt(sum((pred1-testing$wage)^2))
+sqrt(sum((pred2-testing$wage)^2))
+sqrt(sum((combPred - testing$wage)^2))
+```
+
+# validation set
+```{r validate combine}
+pred1V <- predict(mod1,validation)
+pred2V <- predict(mod2,validation)
+predVDF <- data.frame(pred1=pred1V,pred2 =pred2V)
+combPredV <- predict(combModFit,predVDF)
+
+sqrt(sum((pred1V-validation$wage)^2))
+sqrt(sum((pred2V-validation$wage)^2))
+sqrt(sum((combPredV-validation$wage)^2))
+
+```
+
+# Forcasting 
+
+- used in times series data (like stock)
+- data are dependent over time
+- trends, seasonal patterns, cycles
+- subsampling and training is more complicated
+- google.com/trends/correlate
+```{r setting}
+invisible(Sys.setlocale("LC_MESSAGES", "C"))
+invisible(Sys.setlocale("LC_TIME", "C"))
+```
+
+## google data
+```{r goog}
+library(quantmod)
+from.dat <- as.Date("01/01/08",format="%m/%d/%y")
+to.dat <- as.Date("12/31/13",format="%m/%d/%y")
+getSymbols("GOOG",src="google",from=from.dat,to=to.dat)
+getSymbols("GOOG",src="yahoo",from=from.dat,to=to.dat)
+getSymbols("GOOG",src="FRED")
+head(GOOG)
+# 2014-03-27 to 2015-11-19
+from.dat <- as.Date("03/27/14",format="%m/%d/%y")
+to.dat <- as.Date("11/19/15",format="%m/%d/%y")
+
+mGoog <- to.monthly(GOOG)
+googOpen <- Op(mGoog)
+ts1 <- ts(googOpen,frequency = 12)
+plot(ts1,xlab="Years+1",ylab="GOOG")
+
+plot(decompose(ts1),xlab="Years+1")
+
+ts1Train <- window(ts1,start=1,end=5)
+ts1Test <- window(ts1,start=5,end=(7-0.01))
+ts1Train
+
+plot(ts1Train)
+library(forecast)
+# moving average
+lines(ma(ts1Train,order=3),col="red")
+
+# Exponential smoothing
+ets1 <- ets(ts1Train, model="MMM")
+fcast <- forecast(ets1)
+plot(fcast)
+lines(ts1Test,col="red")
+accuracy(fcast,ts1Test)
+```
+
+Rob hyndman forecasting: principles and practice
+
+# Unspervised Prediction
+
+- create clusters
+- predict clusters
+
+## Iris example
+```{r iris unsupervised}
+data(iris)
+library(ggplot2)
+library(caret)
+inTrain <- createDataPartition(y=iris$Species,p=0.7,list=F)
+training <- iris[inTrain,]
+testing <- iris[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+## Cluster with k-means
+```{r iris kmeans}
+kMeans1 <- kmeans(subset(training,select = -c(Species)),centers=3)
+training$clusters <- as.factor(kMeans1$cluster)
+qplot(Petal.Width,Petal.Length,colour=clusters,data = training)
+```
+
+## Compare to real labels
+
+```{r compare}
+table(kMeans1$cluster,training$Species)
+```
+
+## Build predictor
+```{r predict}
+modFit <- train(clusters~.,data=subset(training,select=-c(Species)),method="rpart")
+# classification tree
+table(predict(modFit,training),training$Species)
+```
+
+- error in cluster building
+- error in modeling
+
+## Apply on test
+```{r test}
+testClusterPred <- predict(modFit, testing)
+table(testClusterPred,testing$Species)
+```
+
+# Quiz
+
+## q1
+Set the variable y to be a factor variable in both the training and test set. Then set the seed to 33833. Fit (1) a random forest predictor relating the factor variable y to the remaining variables and (2) a boosted predictor using the "gbm" method. Fit these both with the train() command in the caret package. 
+
+What are the accuracies for the two approaches on the test data set? What is the accuracy among the test set samples where the two methods agree?
+
+
+RF Accuracy = 0.9987 
+GBM Accuracy = 0.5152 
+Agreement Accuracy = 0.9985
+
+RF Accuracy = 0.6082 
+GBM Accuracy = 0.5152 
+Agreement Accuracy = 0.5152
+
+RF Accuracy = 0.3233 
+GBM Accuracy = 0.8371 
+Agreement Accuracy = 0.9983
+
+RF Accuracy = 0.6082 
+GBM Accuracy = 0.5152 
+Agreement Accuracy = 0.6361
+```{r q1}
+library(ElemStatLearn)
+data(vowel.train)
+data(vowel.test) 
+
+vowel.train$y <- as.factor(vowel.train$y)
+vowel.test$y <- as.factor(vowel.test$y)
+set.seed(33833)
+fitForest <- train(y ~.,data = vowel.train,method = "rf")
+fitBoost <- train(y ~.,data=vowel.train,method = "gbm")
+
+pred1 <- predict(fitForest,vowel.test)
+pred2 <- predict(fitBoost,vowel.test)
+tb1 <- table(pred1,vowel.test$y)
+tb2 <- table(pred2,vowel.test$y)
+acur1 <- sum(diag(tb1))/length(pred1)
+acur2 <- sum(diag(tb2))/length(pred2)
+
+agree <- (pred1 == pred2)
+pred.agree <- pred1[agree]
+vowel.test.agree <- vowel.test[agree,]
+tb3 <- table(pred.agree,vowel.test.agree$y)
+accur3 <- sum(diag(tb3))/length(pred.agree)
+```
+
+## Q2
+
+```{r q2}
+library(caret)
+library(gbm)
+set.seed(3433)
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+```
+
+Set the seed to 62433 and predict diagnosis with all the other variables using a random forest ("rf"), boosted trees ("gbm") and linear discriminant analysis ("lda") model. Stack the predictions together using random forests ("rf"). What is the resulting accuracy on the test set? Is it better or worse than each of the individual predictions?
+Stacked Accuracy: 0.88 is better than all three other methods
+Stacked Accuracy: 0.76 is better than lda but not random forests or boosting.
+Stacked Accuracy: 0.80 is worse than all the other methods.
+Stacked Accuracy: 0.80 is better than random forests and lda and the same as boosting.
+
+```{r q2 work}
+set.seed(62433)
+modRf <- train(diagnosis ~.,data=training,method = "rf")
+modBt <- train(diagnosis ~.,data=training,method = "gbm")
+modLda <- train(diagnosis ~.,data=training,method = "lda")
+
+pred1 <- predict(modRf, testing)
+pred2 <- predict(modBt, testing)
+pred3 <- predict(modLda, testing)
+testD <- testing$diagnosis
+
+ac1 <- sum(testD==pred1)/length(testD)
+ac2 <- sum(testD==pred2)/length(testD)
+ac3 <- sum(testD==pred3)/length(testD)
+# stack the predictions
+
+predDF <- data.frame(pred1,pred2,pred3,diagnosis=testD)
+combModFit <- train(diagnosis~.,method="rf",data=predDF)
+combPred <- predict(combModFit,predDF)
+ac4 <- sum(testD==combPred)/length(testD)
+```
+
+## Q3
+```{r q3}
+set.seed(3523)
+library(AppliedPredictiveModeling)
+data(concrete)
+inTrain = createDataPartition(concrete$CompressiveStrength, p = 3/4)[[1]]
+training = concrete[ inTrain,]
+testing = concrete[-inTrain,]
+```
+
+Set the seed to 233 and fit a lasso model to predict Compressive Strength. Which variable is the last coefficient to be set to zero as the penalty increases? (Hint: it may be useful to look up ?plot.enet).
+Age
+Cement
+CoarseAggregate
+BlastFurnaceSlag
+```{r q3 work}
+set.seed(233)
+fitMod <- train(CompressiveStrength ~.,data=training,method="lasso")
+?plot.enet
+par(mfrow=c(2,2))
+plot(fitMod,xvar="penalty")
+plot(fitMod)
+plot(fitMod,xvar="step")
+```
+

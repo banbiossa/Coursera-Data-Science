@@ -1,0 +1,190 @@
+---
+title: "Machine Learning w1"
+output: html_document
+---
+
+# SPAM example
+
+```{r kernlab}
+library(kernlab)
+data(spam)
+head(spam)
+
+plot(density(spam$your[spam$type=="nonspam"]),
+     col = "blue", main = "", xlab = "Frequency of your")
+lines(density(spam$your[spam$type=="spam"]), col = "red")
+abline(v = 0.5, col = "black")
+
+prediction <- ifelse(spam$your > 0.5, "spam", "nonspam")
+table(prediction, spam$type) / length(spam$type)
+```
+
+# Order of importance
+question > data > features > algorithms
+
+1. movie ratings -> movie ratings is probably easy
+
+## good features
+- lead to data compression
+- relevant information
+- expert domain knowledge
+
+## mistake
+- automate feature selection
+- (unspervised deep learning is a version of this)
+
+## Scalability matter
+- netflix never implemented the $1 million argortthim
+
+# Error
+
+## In sample
+- error rate on same data set
+
+## Out of sample
+- error rate on new data set
+
+## Key ideas
+1. out of sample is important
+2. in < out
+3. overfitting
+
+```{r in out sample}
+library(kernlab); data(spam); set.seed(333)
+smallSpam <- spam[sample(dim(spam)[1], size = 10), ]
+spamLabel <- (smallSpam$type=="spam")*1 + 1
+plot(smallSpam$capitalAve, col = spamLabel)
+```
+
+more capital for red(SPAM)
+
+# Prediction rule 1
+- capitalAve > 2.7 = "spam"
+- also catch the small one on the end
+
+```{r spam capitalLetter overfit}
+rule1 <- function(x){
+  prediction <- rep(NA, length(x))
+  prediction[x > 2.7] <- "spam"
+  prediction[x < 2.40] <- "nonspam"
+  prediction[(x >= 2.40 & x<= 2.45)] <- "spam"
+  prediction[(x > 2.45 & x <= 2.70)] <- "nonspam"
+  return(prediction)
+}
+table(rule1(smallSpam$capitalAve), smallSpam$type)
+```
+
+- you get 100% accuracy
+
+```{r spam underfit}
+rule2 <- function(x){
+  prediction <- rep(NA, length(x))
+  prediction[x > 2.8] <- "spam"
+  prediction[x <= 2.8] <- "nonspam"
+  return(prediction)
+}
+table(rule2(smallSpam$capitalAve), smallSpam$type)
+``` 
+
+- whole data
+```{r spam whole data}
+table(rule1(spam$capitalAve), spam$type)
+table(rule2(spam$capitalAve), spam$type)
+sum(rule1(spam$capitalAve) == spam$type)
+sum(rule2(spam$capitalAve) == spam$type)
+```
+
+# Prediction study design
+1. error rate
+2. split data
+3. set features, pick prediction function
+4. apply 1x to test set if no validation
+5. validation
+
+# Know the benchmarks
+
+# Study design
+- 60% train
+- 20% test
+- 20% validation
+
+# Important stuff
+- sample test/validation set randomly
+
+# Type of errors
+- positive = identified, negative = rejected
+- false incorrectly
+- true : correctly
+- true positive: turely sick
+- false positive: healty poople sick
+- true negative healty people healty
+- false negative : sick people told healthy
+
+# Key quantities
+- Sensitivity: Pr(positive|disease) = TP/(TP+FN)
+- specificity: Pr(negative|no disease) = TN/(FP+TN)
+- positive prediction value: Pr(disease|positive)
+- negative prediction value: Pr(no disease|negative)
+- accuarcy: Pr(correct outcome)
+
+# Screening tests
+- medical: low probablility in being sick
+- e.g. 0.1% disease
+- 99% sensitivity and specificity
+- given the test result is positive, what's the probability of having a disease?
+
+Pr(disease|positive) 
+= P(disease and positive) / P(positive)
+```{r calc}
+0.001 * 0.99 / (0.001 * 0.99 + 0.99 * 0.01)
+```
+
+- when 10% of the people are sick
+```{r }
+0.1 * 0.99 / (0.1*0.99 + 0.9 * 0.01)
+```
+
+# For continuous data
+- Mean square error
+- Root mean square error
+1. MSE: sensitive to outliers
+2. Median absolute deviation
+3. concordance? kappa
+
+# ROC curvers
+- assign to a probability
+- cutoffs give difference results
+
+- plot FP and TP
+- AUC: area under curver < 0.5 is random guessing
+- AUC > 0.8 is "good"
+
+# Cross validation
+1. accuacy on the training set is optimistic
+2. test set accuarcy is better
+3. estimate the accuracy from the test set (with cross validation!)
+4. So split the training set and rebuild
+
+## Random subsampling
+- within the training set, random sample
+
+## K-fold
+- cut up the data into k pieces and use the ith for test
+
+## Leave one out
+- same as K fold
+
+## Considerations
+- for times series, use chunks
+- for k fold, larger k less bias, smaller k less variance
+- randomsampleing must be done without repalcement
+- it's called boot strap but underestimates the error
+
+# Probem
+- 1/1000 click rate
+- 99% specifity, 99% sensitivity
+- if predicted as click, what's the probablilty of click?
+- P(will| predict) = P(will and predict) / P(predict)
+```{r week 1 test}
+1/1000 * 0.99 / (1/1000 * 0.99 + 999/1000 * 0.01)
+```

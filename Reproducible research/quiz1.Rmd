@@ -1,0 +1,8 @@
+---
+title: "Reproducable research week 1"
+output: html_document
+---
+
+#setup
+```{r sestup}
+setwd("/Users/shotashimizu/git/Coursera-Data-Science/Reproducible research/")

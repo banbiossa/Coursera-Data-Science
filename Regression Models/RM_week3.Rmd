@@ -1,0 +1,142 @@
+---
+title: "Regression Models week3"
+output:
+  pdf_document:
+    latex_engine: lualatex
+---
+
+# Swiss fertility data
+```{r swiss}
+library(datasets)
+data(swiss)
+require(stats)
+require(graphics)
+pairs(swiss, panel = panel.smooth, main = "Swiss data", col = 3 + (swiss$Catholic>50))
+?swiss
+summary(lm(Fertility ~ . , data = swiss)) #. is all the variables
+```
+
+- agriculture is -0.1721
+```{r agriculture}
+summary(lm(Fertility ~ Agriculture, data = swiss))$coefficients
+```
+
+Adjustment reversed the effect.
+
+Let's simulate this
+```{r simulate}
+n <- 100
+x2 <- 1:n 
+x1 <- .1 * x2 + runif(n -.1, .1); 
+y = - x1 + x2 + rnorm(n, sd = .01)
+summary(lm(y ~ x1))$coef
+summary(lm(y ~ x1 + x2))$coef
+```
+
+- This can happen.
+- which is the correct model?
+
+# Include unnecessary stuff
+```{r unneccssary}
+z <- swiss$Agriculture + swiss$Education
+lm(Fertility ~ . + z, data = swiss)
+```
+
+- z can't add any information
+- z becomes NA
+
+# Dummy variables
+
+- it depends how you choose your binary variable
+* $Y_i = \beta_0 + X_{i1} \beta_1 + X_{i2} \beta_2 + \epsilon_i$.
+
+# Insect sprays
+```{r, echo = FALSE, fig.height=5, fig.width=5}
+require(datasets);data(InsectSprays); require(stats); require(ggplot2)
+g = ggplot(data = InsectSprays, aes(y = count, x = spray, fill  = spray))
+g = g + geom_violin(colour = "black", size = 2)
+g = g + xlab("Type of spray") + ylab("Insect count")
+g
+
+```
+
+```{r insect code}
+summary(lm(count~spray, data = InsectSprays))$coef
+summary(lm(count ~ 
+             I(1 * (spray == 'B')) + I(1 * (spray == 'C')) + 
+             I(1 * (spray == 'D')) + I(1 * (spray == 'E')) +
+             I(1 * (spray == 'F'))
+           , data = InsectSprays))$coef
+```
+
+# what if you include all six
+```{r all six}
+summary(lm(count ~ 
+   I(1 * (spray == 'B')) + I(1 * (spray == 'C')) +  
+   I(1 * (spray == 'D')) + I(1 * (spray == 'E')) +
+   I(1 * (spray == 'F')) + I(1 * (spray == 'A')), data = InsectSprays))$coef
+```
+
+## What if we omit the intercept?
+```{r, echo= TRUE}
+summary(lm(count ~ spray - 1, data = InsectSprays))$coef
+library(dplyr)
+summarise(group_by(InsectSprays, spray), mn = mean(count))
+```
+
+## Reordering the levels
+```{r}
+spray2 <- relevel(InsectSprays$spray, "C")
+summary(lm(count ~ spray2, data = InsectSprays))$coef
+```
+---
+
+- You can also do it manualy if you try hard enough
+
+# Hunger
+```{r hunger}
+hunger <- read.csv("/Users/shotashimizu/git/courses/07_RegressionModels/02_02_multivariateExamples/hunger.csv")
+hunger <- hunger[hunger$Sex != "Both sexes",]
+head(hunger)
+lm <- lm(hunger$Numeric ~ hunger$Year)
+plot(hunger$Year, hunger$Numeric, pch =19, col = "blue")
+```
+
+# Remember the linear model
+$$H v_i = b_0 + b_1 Y_i + e_i$$
+
+# Residuals
+- what are outliers?
+- some outliers have more force. if it's without other x's, it'll have more force.
+
+# Tools
+- ?influence.measures
+- use knowing the context
+- the 10,10 is creating a lot of noise
+
+# Graphs of residuals
+- dfbetas and dfhats show the magnitude of influence of a single plot
+- the orly owl shows the importance of residuals
+- the swiss data,,,
+
+# Selecting models (Multiple Variables)
+- variance inflation, add more to the model and variance goes up
+- if the variable is correlated, more variance inflation
+- temp <- apply(betas, 1, var); temp[2 : 3] / temp[1]
+- this is inflation
+
+# 
+```{r variance inflation}
+n <- 100; nosim <- 1000;
+x1 <- rnorm(n)
+x2 <- rnorm(n)
+x3<- rnorm(n)
+betas <- sapply(1:nosim, function(i){
+  y <- x1 + rnorm(n, sd = .3)
+  c(coef(lm(y ~ x1))[2],
+    coef(lm(y ~ x1 + x2))[2],
+    coef(lm(y ~ x1 + x2 + x3))[2])
+})
+round(apply(betas, 1, sd), 5)
+```
+

@@ -1,0 +1,195 @@
+---
+title: "Practical Machine learning"
+output: html_document
+---
+
+```{r input}
+setwd("git/Coursera-Data-Science/Practical Machine Learning/")
+df <- read.csv("pml-training.csv")
+
+inBuild <- createDataPartition(y=df$classe,p=0.7,list=F)
+validation <- df[-inBuild,]
+buildData <- df[inBuild,]
+
+inTrain <- createDataPartition(y=buildData$classe,p=0.7,list=F)
+training <- buildData[inTrain,]
+testing <- buildData[-inTrain,]
+
+final <- read.csv("pml-testing.csv")
+str(training)
+str(testing)
+names(training)
+table(training$classe)
+```
+
+# fit 
+
+## a simple model will be used
+- probably better for the computation
+
+```{r simple}
+which(colnames(training) == "gyros_belt_x")
+which(colnames(training) == "magnet_belt_z")
+which(colnames(training) == "gyros_arm_x")
+which(colnames(training) == "magnet_arm_z")
+which(colnames(training) == "classe")
+subtraining <- training[,c(37:45,60:68,160)]
+
+fitModTree <- train(classe ~.,data=subtraining,method="rpart")
+pred <- predict(fitModTree,newdata=testing)
+answer3 <- pred
+answer3
+```
+
+## find out how to cross validate
+
+
+## fit a model by random forest, using the predictors
+- roll_belt -> - skewness_roll_belt
+- min_yaw_belt
+- gyros_belt_x -> total_accel_arm
+- gyros_arm_x -> skewness_yaw_arm  
+- roll_dumbell -> skewness_pitch_dumbell
+
+## selct the predictors in data frame
+
+```{r all but NA}
+which(colnames(training) == "roll_belt")
+which(colnames(training) == "skewness_roll_belt")
+which(colnames(training) == "min_yaw_belt")
+which(colnames(training) == "gyros_belt_x")
+which(colnames(training) == "total_accel_arm")
+which(colnames(training) == "gyros_arm_x")
+which(colnames(training) == "skewness_yaw_arm")
+which(colnames(training) == "roll_dumbbell")
+which(colnames(training) == "skewness_pitch_dumbbell")
+
+subtraining <- training[,c(8:15,23,37:49,60:74,84:91,160)]
+
+fitModNA <- train(classe ~.,data = subtraining,method="rpart")
+pred <- predict(fitModNA, newdata=testing)
+table(pred)
+fitModNA$finalModel
+pred
+answer5 <- pred
+```
+
+## select meaningful
+roll_belt
+yaw_belt
+gyros_belt_x
+yaw_arm
+gyros_arm_x
+magnet_arm_z
+
+```{r with roll}
+which(colnames(training) == "roll_belt")
+which(colnames(training) == "yaw_belt")
+which(colnames(training) == "gyros_belt_x")
+which(colnames(training) == "yaw_arm")
+which(colnames(training) == "gyros_arm_x")
+which(colnames(training) == "magnet_arm_z")
+which(colnames(training) == "gyros_belt_x")
+which(colnames(training) == "magnet_belt_z")
+which(colnames(training) == "gyros_arm_x")
+which(colnames(training) == "magnet_arm_z")
+which(colnames(training) == "classe")
+subtraining <- training[,c(8:10,3,37:48,60:68,160)]
+
+library(ggplot2)
+library(caret)
+library(dplyr)
+fitMod <- train(classe ~.,data = subtraining,method="rpart")
+pred <- predict(fitMod, newdata=testing)
+table(pred)
+fitMod$finalModel
+pred
+answer1 <- pred
+```
+answer1
+ [1] A A B C A E B B A A B B B A E A A B D A
+ forest with 26 predictors
+ 
+# random forest wth 19 predictors
+
+```{r rf}
+fitMod <- train(classe ~ ., data=subtraining,method="rf")
+pred <- predict(fitMod,newdata=testing)
+pred
+answer2 <- pred
+answer2
+```
+
+> answer2
+ [1] B A B A A E D B A A B C B A E E A B B B
+ random forest with 19predictors
+ 
+# Model with 19 predictors only
+
+gyros_belt_x
+magnet_belt_z
+gyros_arm_x
+magnet_arm_z
+classe
+
+```{r select meaningful tree 19}
+which(colnames(training) == "gyros_belt_x")
+which(colnames(training) == "magnet_belt_z")
+which(colnames(training) == "gyros_arm_x")
+which(colnames(training) == "magnet_arm_z")
+which(colnames(training) == "classe")
+subtraining <- training[,c(37:45,60:68,160)]
+
+fitModTree <- train(classe ~.,data=subtraining,method="rpart")
+pred <- predict(fitModTree,newdata=testing)
+answer3 <- pred
+answer3
+```
+ answer3
+ [1] A A A A A D D D A A A D D A D A A D A A
+ forest with 19 predictors
+
+# Full tree model
+
+```{r full}
+fitModFull <- train(classe ~.,data=training,method="rpart")
+pred <- predict(fitModFull, newdata=testing)
+answer4 <- pred
+answer4
+fitModFull$finalModel
+```
+
+> answer4
+ [1] B A B A A E D B A A B C B A E E A B B B
+ 
+```{r compare}
+table(answer1,answer2)
+table(answer1,answer3)
+table(answer2,answer3)
+table(answer1,answer4)
+table(answer2,answer4)
+table(answer3,answer4)
+```
+
+answer 2 and 4 are identical.
+- 1: 26 variables
+- 2: random forest
+- 3: 19 predictors only
+- 4: full forest (160)
+- 5: everything but NA
+
+# Combine everything I got
+```{r combine}
+predDf <- data.frame(answer1,answer2,answer3,answer4,answer5,classe=testing$classe)
+combModFit <- train(classe~.,data=predDf,method="glm")
+combPred <- predict(combModFit,predDf)
+```
+
+## validation
+
+pred1V <- predict(mod1,validation)
+pred2V <- predict(mod2,validation)
+predVDF <- data.frame(pred1=pred1V,pred2 =pred2V)
+combPredV <- predict(combModFit,predVDF)
+
+```{r validation}

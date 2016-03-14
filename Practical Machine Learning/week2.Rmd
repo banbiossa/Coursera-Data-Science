@@ -1,0 +1,599 @@
+---
+title: "Machine Learning"
+output: html_document
+---
+
+# What data should you use
+- Nate Silver from fivethirtyeight.com
+- like data to predict like
+- he weighted the data
+
+# Key idea
+- get the closest data
+- moneyball: predict player performance from player performance
+
+# Caret package
+- pre process
+- cutting data
+
+## why caret?
+- there are a lot of options for each function
+
+## SPAM example
+```{r spam_caret}
+library(caret);library(kernlab); data(spam)
+inTrain <- createDataPartition(y = spam$type, p = 0.75, list = F)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+dim(training)
+```
+
+## SPAM: fit a model
+```{r spam caret fit}
+set.seed(32343)
+modelFit <- train(type ~ ., data = training, method = "glm")
+modelFit
+modelFit$finalModel
+predictions <- predict(modelFit, newdata = testing)
+predictions
+
+confusionMatrix(predictions, testing$type)
+```
+
+# Data slicing
+```{r data slicing}
+inTrain <- createDataPartition(y = spam$type, p = 0.75, list = F)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+dim(training)
+```
+
+## K fold
+```{r k fold}
+set.seed(32323)
+folds <- createFolds(y = spam$type, k = 10, list = T, returnTrain = T)
+sapply(folds, length)
+folds[[1]][1:10]
+```
+
+## return test
+```{r return test}
+set.seed(32323)
+folds <- createFolds(y = spam$type, k =10, list = T, returnTrain = F)
+sapply(folds, length)
+folds[[1]][1:10]
+```
+
+## resampling
+```{r resample}
+set.seed(32323)
+folds <- createResample(y = spam$type, times = 10, list = T)
+sapply(folds, length)
+folds[[1]][1:10]
+```
+
+## Time slices
+```{r time slice}
+set.seed(32323)
+tme <- 1:1000
+folds <- createTimeSlices(y = tme, initialWindow = 20, horizon = 10)
+names(folds)
+folds$train[[1]]
+folds$test[[1]]
+```
+
+# Train example
+```{r train}
+library(caret);library(kernlab); data(spam)
+inTrain <- createDataPartition(y = spam$type, p = 0.75, list = F)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+modelFit <- train(type ~ . , data = training, method = "glm")
+args(train.default)
+```
+
+## Metric options
+- RMSE
+- RSquared also possible
+- accuarcy
+- kappa, concordance?
+
+## trainControl
+```{r train control}
+args(trainControl)
+```
+
+## method
+- boot = bootstrapping
+- boot632 = bootstrapping with adjustment
+- cv = cross validation
+- repeatedcv = repeated cross validation
+- LOOCV = leave one out cross validation
+
+## number
+- for boot/cross validation
+- number of subsamples to take
+
+## repeats
+- number of times to repeate subsampling
+- slow things down
+
+## set the seed
+- the random numbers will be the same
+- set an overall seed
+- seed in a train control
+
+# seed example
+```{r seed}
+set.seed(1235)
+modelFit2 <- train(type ~., data = training, method = "glm")
+modelFit2
+```
+
+# Plotting predictors
+```{r plotting}
+library(ISLR); library(ggplot2); library(caret);
+data(Wage)
+summary(Wage)
+```
+
+# Get traing sets
+```{r slice}
+inTrain <- createDataPartition(y = Wage$wage, p = 0.7, list = F)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+# plot
+```{r featureplot}
+dev.off()
+featurePlot(x = training[, c("age", "education", "jobclass")],
+            y = training$wage,
+            plot = "pairs")
+qplot(age, wage, data = training)
+qplot(age, wage, colour = jobclass, data = training)
+qq <- qplot(age, wage, colour=education, data = training)
+qq + geom_smooth(method = 'lm', formula = y~x)
+```
+
+## cut
+```{r cut}
+library(Hmisc)
+cutWage <- cut2(training$wage, g = 3)
+table(cutWage)
+```
+
+## boxplot with cut2
+```{r boxplot cut2}
+p1 <- qplot(cutWage, age, data = training, fill = cutWage, geom = c("boxplot"))
+p1
+```
+
+## boxplot with overlay
+```{r boxplot gitter}
+p2 <- qplot(cutWage, age, data = training, fill = cutWage, geom = c("boxplot","jitter"))
+gridExtra::grid.arrange(p1,p2,ncol = 2)
+```
+
+## Tables
+```{r tables}
+t1 <- table(cutWage, training$jobclass)
+t1
+prop.table(t1,1) #1 for row, 2 for column
+```
+
+# Density plots
+```{r density plot}
+qplot(wage, colour= education, data = training, geom = "density")
+```
+
+# Preprocessing
+- model based approaches
+- 
+```{r preprocess}
+library(caret);library(kernlab); data(spam)
+inTrain <- createDataPartition(y = spam$type, p = 0.75, list = F)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+hist(training$capitalAve, main = "", xlab = "ave. captial run length")
+mean(training$capitalAve)
+sd(training$capitalAve)
+```
+
+# Standarizing
+```{r standarize}
+trainCapAve <- training$capitalAve
+trainCapAveS <- (trainCapAve - mean(trainCapAve)) / sd(trainCapAve)
+mean(trainCapAveS)
+sd(trainCapAveS)
+```
+
+## test set
+```{r standarize test}
+testCapAve <- testing$capitalAve
+testCapAveS <- (testCapAve - mean(trainCapAve)) / sd(trainCapAve)
+mean(testCapAveS)
+sd(testCapAveS)
+```
+
+## pre-process function
+```{r pre process}
+preObj <- preProcess(training[,-58], method=c("center","scale")) #58 is the outcome
+trainCapAveS <- predict(preObj, training[,-58])$capitalAve
+mean(trainCapAveS)
+sd(trainCapAveS)
+```
+
+```{r pre process test}
+testCapAveS <- predict(preObj, testing[,-58])$capitalAve
+mean(testCapAveS)
+sd(testCapAveS)
+```
+
+## pre-process argument
+```{r pre process argument}
+set.seed(32343)
+modelFit <- train(type ~., data = training, preProcess = c("center","scale"), method = "glm")
+modelFit
+```
+
+## Box-cox transforms
+```{r box cox}
+preObj <- preProcess(training[,-58], method = c("BoxCox"))
+trainCapAveS <- predict(preObj, training[,-58])$capitalAve
+par(mfrow=c(1,2)); hist(trainCapAveS); qqnorm(trainCapAveS)
+```
+
+## Missing data, Impute them
+```{r impute}
+set.seed(13343)
+library(RANN)
+
+# make some NA values
+training$capAve <- training$capitalAve
+selectNA <- rbinom(dim(training)[1],size=1,prob=0.05)==1
+training$capAve[selectNA] <- NA
+
+# Impute and standarize
+preObj <- preProcess(training[,-58], method="knnImpute")
+capAve <- predict(preObj, training[,-58])$capAve
+
+# Standarize true values
+capAveTruth <- training$capitalAve
+capAveTruth <- (capAveTruth - mean(capAveTruth)) / sd(capAveTruth)
+ 
+quantile(capAve - capAveTruth)
+quantile((capAve - capAveTruth)[selectNA])
+quantile((capAve - capAveTruth)[!selectNA])
+```
+
+# Covariate creation
+```{r covariate}
+library(ISLR); library(caret); data(Wage);
+inTrain <- createDataPartition(y = Wage$wage, p = 0.7, list = F)
+training <- Wage[inTrain,]; testing <- Wage[-inTrain,]
+```
+
+## create dummy variables
+```{r dummy}
+table(training$jobclass)
+dummies <- dummyVars(wage ~ jobclass, data = training)
+head(predict(dummies, newdata = training))
+```
+
+## remove zero covarites
+```{r remove zero}
+nsv <- nearZeroVar(training, saveMetrics = T)
+nsv
+```
+
+## Spline basis
+```{r spline basis}
+library(splines)
+bsBasis <- bs(training$age, df = 3)
+bsBasis
+```
+
+## Fitting curves with splines
+```{r curve}
+lm1 <- lm(wage ~ bsBasis, data = training)
+par(mfrow = c(1,1))
+plot(training$age, training$wage, pch = 19, cex = 0.5)
+points(training$age, predict(lm1, newdata = training), col = "red",pch = 19, cex = 0.5)
+```
+
+## splines on test set
+```{r splines test}
+predict(bsBasis, age = testing$age)
+```
+
+- feature extraction for ???
+- err on the overcreation of features
+- in some things, some things are neccessary
+
+- some done in preProcess
+- do a lot of exploratory
+
+# Principle component analysis
+```{r pca}
+library(caret); library(kernlab); data(spam)
+inTrain <- createDataPartition(y = spam$type, p = 0.75, list = F)
+training <- spam[inTrain,]; testing <- spam[-inTrain,]
+M <- abs(cor(training[,-58]))
+diag(M) <- 0 #with itself is 0
+which(M>0.8, arr.ind = T)
+```
+
+- these are probably phone numbers
+
+```{r cor}
+names(spam)[c(34,32)]
+plot(spam[,34],spam[,32])
+```
+
+## Basic PCA idea
+- just get the important stuff
+
+## we could rotate the plot
+```{r rotate}
+X <- 0.71 * training$num415 + 0.71*training$num857
+Y <- 0.71 * training$num415 - 0.71*training$num857
+plot(X,Y)
+```
+
+## Related problems
+- get the lowest rank matrix
+- x = udv
+- pva is v
+
+## Principal components
+```{r pca }
+smallSpam <- spam[,c(34,32)]
+prComp <- prcomp(smallSpam)
+dev.off()
+dev.new()
+plot(prComp$x[,1], prComp$x[,2])
+prComp$rotation
+```
+
+## PCA on spam
+```{r pca spam}
+typeColor <- ((spam$type=="spam")*1 + 1)
+prComp <- prcomp(log10(spam[,-58]+1))
+plot(prComp$x[,1], prComp$x[,2], col = typeColor, xlab = "PC1",ylab = "PC2")
+```
+
+## PCA with caret
+```{r pca caret}
+preProc <- preProcess(log10(spam[,-58]+1), method = "pca", pcaComp=2)
+spamPC <- predict(preProc, log10(spam[,-58]+1))
+plot(spamPC[,1],spamPC[,2],col = typeColor)
+```
+
+## Preprocessing with PCA
+```{r pre PCA}
+preProc <- preProcess(log10(training[,-58]+1), method = "pca",pcaComp=2)
+trainPC <- predict(preProc, log10(training[,-58]+1))
+modelFit <- train(training$type ~., method = "glm", data = trainPC)
+
+testPC <- predict(preProc, log(testing[,-58]+1))
+confusionMatrix(testing$type, predict(modelFit,testPC))
+```
+
+## Alternative
+```{r alternative}
+modelFit <- train(training$type ~.,method = "glm",preProcess="pca",data=training)
+confusionMatrix(testing$type, predict(modelFit,testing))
+```
+
+# Predicting with regression
+- fit a simple regression model
+- plug in new covariates
+
+```{r regression}
+library(caret);data(faithful);set.seed(333)
+inTrain <- createDataPartition(y=faithful$waiting,p=0.5,list=F)
+trainFaith <- faithful[inTrain,]; testFaith <- faithful[-inTrain,]
+head(trainFaith)
+plot(trainFaith$waiting, trainFaith$eruptions,pch=19,col="blue",xlab="waiing",ylab="duration")
+```
+
+## Fit a linear model
+```{r linear}
+lm1 <- lm(eruptions ~ waiting, data = trainFaith)
+summary(lm1)
+
+plot(trainFaith$waiting, trainFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="duration")
+lines(trainFaith$waiting,lm1$fitted,lwd=3)
+```
+
+## Predict a new value
+```{r predict new}
+coef(lm1)[1] + coef(lm1)[2]*80
+newdata <- data.frame(waiting=80)
+predict(lm1,newdata)
+```
+
+## training and teset
+```{r predict test}
+par(mfrow=c(1,2))
+plot(trainFaith$waiting, trainFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="duration")
+lines(trainFaith$waiting,lm1$fitted,lwd=3)
+plot(testFaith$waiting, testFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="duration")
+lines(testFaith$waiting,predict(lm1,newdata=testFaith),lwd=3)
+```
+
+## traingset errors
+```{r error}
+# calculate RMSE on training
+sqrt(sum(lm1$fitted - trainFaith$eruptions)^2)
+# calculate RMSE on test
+sqrt(sum((predict(lm1,newdata=testFaith) - testFaith$eruptions)^2))
+```
+
+## Prediction intervals
+```{r predic interval}
+pred1 <- predict(lm1,newdata=testFaith,interval = "prediction")
+ord <- order(testFaith$waiting)
+plot(testFaith$waiting,testFaith$eruptions,pch=19,col="blue")
+matlines(testFaith$waiting[ord],pred1[ord,],type="l",,col=c(1,2,2),lty=c(1,1,1),lwd=3)
+par(mfrow=c(1,1))
+```
+
+## in caret
+```{r predic caret}
+modelFit <- train(eruptions ~ waiting, data = trainFaith,method = "lm")
+summary(modelFit$finalModel)
+```
+
+# Predicting with regression model covariates
+```{r regress covariates}
+library(ISLR); library(ggplot2); library(caret);
+data(Wage)
+Wage <- subset(Wage,select=-c(logwage))
+summary(Wage)
+```
+
+## get training
+```{r train}
+inTrain <- createDataPartition(y=Wage$wage,p=0.7,list=F)
+training <- Wage[inTrain,]; testing <- Wage[-inTrain,]
+dim(training);dim(testing)
+```
+
+## Feature plot
+```{r feature}
+featurePlot(x=training[,c("age","education","jobclass")],
+            y = training$wage,
+            plot = "pairs")
+```
+
+## plot versus age
+```{r age}
+qplot(age,wage,data = training)
+qplot(age,wage,colour=jobclass,data=training)
+qplot(age,wage,colour=education,data=training)
+```
+
+## Fit a linear model
+```{r linear}
+modFit <- train(wage ~ age + jobclass + education,method="lm",data=training)
+finMod <- modFit$finalModel
+print(modFit)
+```
+
+## Diagnostics
+```{r diagnostics}
+plot(finMod,1,pch=19,cex=0.5,col="#00000010")
+```
+
+## Color by variables not in the model
+```{r colorE}
+qplot(finMod$fitted,finMod$residuals,colour=race,data=training)
+```
+
+## plot by index
+```{r index}
+plot(finMod$residuals,pch=19)
+```
+
+## predict versus truth
+```{r predict}
+pred <- predict(modFit, testing)
+qplot(wage,pred,colour=year,data=testing)
+```
+
+## all covariates
+```{r all}
+modFitAll <- train(wage ~ ., data=training,method="lm")
+pred <- predict(modFitAll,testing)
+qplot(wage,pred,data=testing)
+```
+
+# Test
+```{r test}
+library(AppliedPredictiveModeling)
+library(caret)
+data(AlzheimerDisease)
+
+adData = data.frame(diagnosis,predictors)
+trainIndex = createDataPartition(diagnosis, p = 0.50,list=FALSE)
+training = adData[trainIndex,]
+testing = adData[-trainIndex,]
+dim(training)
+dim(testing)
+```
+
+## Q2
+```{r q2}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+qplot(training$Superplasticizer)
+```
+
+## Q3
+```{r q3}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+
+names <- names(training)
+rows <- grep("^IL.", names, value = T)
+rows[13] <- "diagnosis"
+subTrain <- training[,names %in% rows]
+head(subTrain)
+
+# pre process with PCA
+modelFit <- train(subTrain$diagnosis ~.,method = "glm",preProcess="pca",data=subTrain)
+modelFit
+confusionMatrix(subTrain$diagnosis, predict(modelFit,subTrain))
+
+preProc <- preProcess(subTrain[,-1],method="pca",thresh=0.9)
+PC <- predict(preProc, subTrain[,-1])
+dim(PC)
+```
+
+## Q4
+```{r q4}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+
+names <- names(training)
+rows <- grep("^IL.", names, value = T)
+rows[13] <- "diagnosis"
+subTrain <- training[,names %in% rows]
+head(subTrain)
+subTest <- testing[,names %in% rows]
+
+# as they are
+modelFit <- train(subTrain$diagnosis ~.,method = "glm",data=subTrain)
+confusionMatrix(subTest$diagnosis, predict(modelFit,subTest))
+
+# PCA 0.8
+preProc <- preProcess(subTrain[,-1],method="pca",thresh=0.8)
+trainPC <- predict(preProc, subTrain[,-1])
+modelFit <- train(subTrain$diagnosis ~., method = "glm", data = trainPC)
+
+
+testPC <- predict(preProc, subTest[,-1])
+confusionMatrix(subTest$diagnosis, predict(modelFit,testPC))
+```
+

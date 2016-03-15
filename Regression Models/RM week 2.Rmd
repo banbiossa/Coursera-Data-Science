@@ -3,6 +3,7 @@ title: "Regression Models week 2"
 output: pdf_document
 ---
 
+<<<<<<< HEAD
 # The linear model
 $$
 Y_i = \beta_1 X_{1i} + \beta_2 X_{2i} + \dots + \beta_p X_{pi} + \epsilon_i = 
@@ -113,4 +114,286 @@ e1 <- sum(resid(fit1)^2)
 fit
 e2 <- sum(resid(fit)^2)
 e2/e1
+=======
+- add gausians erros
+$$
+Y_i = \beta_0 + \beta_1 X_i + \epsilon_i
+$$
+
+## Example  
+
+using diamond prices
+```{r diamond2}
+library(UsingR)
+data(diamond)
+library(ggplot2)
+g = ggplot(diamond, aes(x = carat, y = price))
+g = g + xlab("Mass (carats)")
+g = g + ylab("Price (SIN $)")
+g = g + geom_point(size = 6, colour = "black", alpha = 0.2)
+g = g + geom_point(size = 5, colour = "blue", alpha = 0.2)
+g = g + geom_smooth(method = "lm", colour = "black")
+g
+```
+
+## Fitting the linear regression model
+```{r lm}
+fit <- lm(price ~ carat, data = diamond)
+summary(fit)
+coef(fit)
+```
+
+## getting a better intercept
+```{r intercept}
+fit2 <- lm(price ~ I(carat - mean(carat)), data = diamond)
+coef(fit2)
+```
+- This gets the average price of the diamond for the mean size (0.2 carats)
+
+```{r bigger carat}
+fit3 <- lm(price ~ I(carat*10), data = diamond)
+coef(fit3)
+```
+
+## Predicting the price of a diamond
+```{r predict}
+newx <- c(0.16, 0.27, 0.34)
+coef(fit)[1] + coef(fit)[2] * newx
+predict(fit, newdata = data.frame(carat = newx))
+```
+- predict(fit) returns from the original diamond$carat data
+
+## Residuals
+- residual variation: variation around the regression line
+- residuals: the errors from the regression line
+$$
+e_i = Y_i - \hat{Y}_i
+$$
+
+Least squares minimized $\sum\limits_{i = 1}^n e_i^2$
+
+# Properties of residuals
+- $E[e_i] = 0$
+- if an intercept is included, $\sum\limits_{i=1}^n e_i = 0$
+- if a regressor variable X is included, $\sum\limits_{i=1}^n e_i X_i = 0$
+
+```{r residuals}
+data(diamond)
+y <- diamond$price;
+x <- diamond$carat
+n <- length(y)
+fit <- lm(y~x)
+e <- resid(fit)
+yhat <- predict(fit)
+max(abs(e - (y - yhat)))
+max(abs(e - (y - coef(fit)[1] - coef(fit)[2] * x)))
+sum(e)
+sum(e*x)
+```
+
+## Plot
+```{r plot}
+plot(diamond$carat, diamond$price, 
+     xlab = "Mass(carats)", 
+     ylab = "Price (SIN $)",
+     bg = "lightblue",
+     col = "black",
+     cex = 1.1,
+     pch = 21, 
+     frame = F)
+abline(fit, lwd = 2)
+for(i in 1:n)
+  lines(c(x[i], x[i]), c(y[i],yhat[i]), col = "red", lwd = 2)
+```
+
+## Residuals on the y axis
+```{r residual on y}
+plot(x, e, 
+     xlab = "Mass (carats)",
+     ylab = "Residuals (SIN $)",
+     bg = "lightblue",
+     col = "black", cex = 2, pch = 21, frame = F)
+abline(h = 0, lwd = 2)
+for(i in 1:n)
+  lines(c(x[i],x[i]), c(e[i], 0), col = "red", lwd = 2)
+```
+
+## non-linear data
+```{r non-linear}
+x = runif(100, -3, 3)
+y = x + sin(x) + rnorm(100, sd = .2)
+library(ggplot2)
+g = ggplot(data.frame(x = x, y = y), aes(x = x, y = y))
+g  = g + geom_smooth(method = "lm", colour = "black")
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g
+```
+
+- incorrect models (in this case linear) are also important. 
+- however, we may get meaningful insight by looking at the residuals
+
+## Residual 
+```{r residual sin}
+g = ggplot(data.frame(x  =x , y = resid(lm(y~x))), aes(x = x, y = y))
+g = g + geom_hline(yintercept = 0, size = 2)
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g = g + xlab("X") + ylab("Residual")
+g
+```
+
+## Heteroskedasticity
+```{r hete-something}
+x <- runif(100,0,6)
+y <- x + rnorm(100, mean = 0, sd = .001*x)
+g = ggplot(data.frame(x = x, y = y), aes(x = x, y = y))
+g = g + geom_smooth(method = "lm", colour = "black")
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g  = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g
+```
+
+## Getting rid of the blank space
+```{r blank space}
+g = ggplot(data.frame(x = x, y = resid(lm(y~x))), aes(x = x, y = y))
+g = g + geom_hline(yintercept  = 0, size = 2)
+g = g + geom_point(size = 7, colour = "black", alpha = 0.4)
+g = g + geom_point(size = 5, colour = "red", alpha = 0.4)
+g = g + xlab("X") + ylab("Residual")
+g
+```
+
+- this trend that the error gets bigger is called heteroskedasticity
+
+```{r }
+diamond$e <- resid(lm(price ~ carat, data = diamond))
+g = ggplot(diamond, aes(x = carat, y = e))
+g = g + xlab("Mass (carats)")
+g = g + ylab("Residual price(SIN $)")
+g = g + geom_hline(yintercept = 0, size = 2)
+g = g + geom_point(size = 7, colour = "black", alpha = 0.5)
+g = g + geom_point(size = 5, colour = "blue", alpha = 0.2)
+g
+```
+
+## Diamond data residual plot
+```{r residual diamond}
+e = c(resid(lm(price ~ 1, data = diamond)),    ## variation around the average price
+      resid(lm(price~carat, data = diamond)))  ## variation around carat
+fit = factor(c(rep("Itc", nrow(diamond)),
+               rep("Itc, slope", nrow(diamond))))
+g = ggplot(data.frame(e = e, fit = fit), aes(y = e, x = fit, fill = fit))
+g  = g + geom_dotplot(binaxis = "y", size = 2, stackdir = "center")
+g = g + xlab("Fitting approach")
+g = g + ylab("Residual price")
+g
+```
+
+- most of the variation can be explained by the regression to carat
+
+# Residual Variance
+$$
+\hat{\sigma}^2 = \frac{1}{n-2} \sum\limits_{i=1}^n e_i^2
+$$
+- n-2 as this loses 2 degress of freedom, sum(e) = 0, sum(e*x) = 0
+$$
+
+```{r diamond}
+y <- diamond$price
+x <- diamond$carat
+n <- length(y)
+fit <- lm(y ~ x)
+summary(fit)$sigma
+sqrt(sum(resid(fit)^2) / (n-2))
+
+data(anscombe)
+example(anscombe)
+```
+
+# Inference in regression
+- beta's can be predicted by the data
+- $\frac{\hat{\beta} - \beta}{\sigma}$ follow a t distruibution
+
+$$
+\sigma^2_{\hat{\beta_1}} = Var(\hat{\beta}_1) = \sigma^2 / \sum\limits_{i=1}^n (X_i - \overline{X})^2
+$$
+- you want more variation in the predictor
+
+$$
+\sigma^2_{\hat{\beta}_0} = Var(\hat{\beta}_0) = 
+\Bigr( \frac{1}{n} + \frac{\overline{X}^2}{\sum\limits_{i=1}^n (X_i - \overline{X})^2} \sigma ^2   \Bigl) 
+$$
+
+$$
+\frac{\hat{\beta}_j - \beta_j}{\hat\sigma_{\hat{\beta}_j}}
+$$
+- this follows a t distruibtuion, df = n-2
+
+```{r inference in regression}
+library(UsingR)
+data(diamond)
+y <- diamond$price
+x <- diamond$carat
+n <- length(y)
+beta1 <- cor(x,y) * sd(y) / sd(x)
+beta0 <- mean(y) - beta1 * mean(x)
+e <- y - beta0 - beta1 * x
+sigma <- sqrt(sum(e^2)/(n-2))
+ssx <- sum((x - mean(x))^2)
+seBeta0 <- (1 / n + mean(x)^2 / ssx) ^.5 * sigma
+seBeta1 <- sigma/ sqrt(ssx)
+tBeta0 <- beta0 / seBeta0
+tBeta1 <- beta1 / seBeta1
+pBeta0 <- 2 * pt(abs(tBeta0), df = n-2, lower.tail = F)
+pBeta1 <- 2 * pt(abs(tBeta1), df = n-2, lower.tail = F)
+coefTable <- rbind(c(beta0, seBeta0, tBeta0, pBeta0), c(beta1, seBeta1, tBeta1, pBeta1))
+colnames(coefTable) <- c("Estimate", "Std.Error", "t value", "P(>|t|)")
+rownames(coefTable) <- c("(Intercept)", "x")
+```
+
+## Easy way
+```{r coef}
+coefTable
+fit <- lm(y ~ x)
+summary(fit)$coefficients
+```
+
+## coefs
+```{r coefs}
+sumCoef <- summary(fit)$coefficients
+sumCoef[1,1] + c(-1,1) * qt(.975, df = fit$df) * sumCoef[1,2]
+(sumCoef[2,1] + c(-1,1) * qt(.975, df = fit$df) * sumCoef[2,2]) / 10
+```
+- 95% confident that 0.1 carats increase will result in 355 - 388 SID increase
+
+# Prediction
+- $\hat{\beta}_0 + \hat{\beta}_1 x_0$ should make sense
+- line at x0, 
+$$ \hat{\sigma} \sqrt{\frac{1}{n} + 
+\frac{(x_0 - \overline{X})^2}{\sum\limits_{i=1}^n (X_i - \overline{X})^2}}$$
+- prediction interval se at x_0, 
+$$
+\hat{\sigma} \sqrt{1 + \frac{1}{n} + 
+\frac{(x_0 - \overline{X})^2}{\sum\limits_{i=1}^n (X_i - \overline{X})^2}}
+$$
+
+```{r beta prediction}
+library(ggplot2)
+newx = data.frame(x = seq(min(x), max(x), length = 100))
+p1 = data.frame(predict(fit, newdata = newx, interval = ("confidence")))
+p2 = data.frame(predict(fit, newdata = newx, interval = ("prediction")))
+p1$interval = "confidence"
+p2$interval = "prediction"
+p1$x = newx$x
+p2$x = newx$x
+dat = rbind(p1, p2)
+names(dat)[1] = "y"
+
+g = ggplot(dat, aes(x = x, y = y))
+g = g + geom_ribbon(aes(ymin = lwr, ymax = upr, fill = interval), alpha = 0.2)
+g = g + geom_line()
+g = g + geom_point(data = data.frame(x = x, y = y), aes(x = x, y = y), size = 4)
+g
+>>>>>>> origin/master
 ```

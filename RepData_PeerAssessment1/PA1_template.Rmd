@@ -15,7 +15,7 @@ opts_chunk$set(cache = FALSE)
 
 ## Loading and preprocessing the data
 ```{r}
-setwd("/Users/shota/git/Coursera-Data-Science/RepData_PeerAssessment1/")
+setwd("/Users/shotashimizu//git/Coursera-Data-Science/RepData_PeerAssessment1/")
 data <- read.csv("./data/activity.csv")
 data$date <- as.Date(data$date, "%Y-%m-%d")
 ```

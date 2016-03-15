@@ -1,12 +1,15 @@
 # Reproducible Research: Peer Assessment 1
 ### Setting Global options
 
+```
+## Warning: package 'lubridate' was built under R version 3.2.3
+```
 
 
 ## Loading and preprocessing the data
 
 ```r
-setwd("/Users/shota/git/Coursera-Data-Science/RepData_PeerAssessment1/")
+setwd("/Users/shotashimizu//git/Coursera-Data-Science/RepData_PeerAssessment1/")
 data <- read.csv("./data/activity.csv")
 data$date <- as.Date(data$date, "%Y-%m-%d")
 ```
@@ -18,7 +21,7 @@ stepsSum <- tapply(data$steps, data$date, sum)
 hist(stepsSum)
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-2-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)\
 
 The mean is
 
@@ -47,7 +50,7 @@ intervalMean <- tapply(data$steps, data$interval, mean, na.rm=T)
 plot(intervalMean, type="l")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png)\
 
 The maximum is 
 
@@ -80,7 +83,7 @@ sum(is.na(data$steps))
 
 ```r
 data2 <- data
-for(i in seq_along(data$steps)){
+for(i in seq_along(data2$steps)){
         if(is.na(data2$steps[[i]])){
                 a <- as.character(data2$interval[[i]])
                 data2$steps[[i]] <- intervalMean[a]
@@ -117,7 +120,7 @@ stepsSum2 <- tapply(data2$steps, data2$date, sum)
 hist(stepsSum2)
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-8-1.png) 
+![](PA1_template_files/figure-html/unnamed-chunk-8-1.png)\
 
 
 The mean is
@@ -162,3 +165,12 @@ median(stepsSum, na.rm=T) - median(stepsSum2, na.rm=T)
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
+```r
+data2$weekend <- (weekdays(data$date,T) == "Sun" | weekdays(data$date,T) == "Sat")
+dataWeekend <- with(data2, tapply(steps, list(interval, weekend), mean))
+par(mfrow=c(2,1))
+plot(dataWeekend[,1], type = "l")
+plot(dataWeekend[,2], type = "l")
+```
+
+![](PA1_template_files/figure-html/unnamed-chunk-13-1.png)\

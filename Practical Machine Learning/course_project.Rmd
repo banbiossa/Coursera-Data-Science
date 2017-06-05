@@ -1,0 +1,120 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Aim
+In this paper, the manner in which the participants did the exercise will be predicted.
+
+## Summary
+The model will be built on random forest, as it is known to have good prediction results. 
+Out of the 160 variables in the original data, 53 were chosen to be in the model, after removing variables with NA's and blanks. 
+The expected out of sample error is 10%, which is the error rate from the testing sets.
+
+## Cleaning data
+- some variables have blanks and NA's so they will be removed. 
+
+```{r setup}
+setwd("~/git/Coursera-Data-Science/Practical Machine Learning/")
+whole <- read.csv("pml-training.csv")
+library(caret)
+library(plyr)
+library(dplyr)
+
+validation <- read.csv("pml-testing.csv")
+
+too_many_nas <- apply(whole, 2, function(x){
+        c <- is.na(x)
+        d <- (x==0)
+        e <- (x=="")
+        (sum(c) > length(x)/2) | (sum(e) > length(x)/2)
+})
+
+whole <- whole[,!too_many_nas]
+names(whole)
+```
+
+## Exploratory data analysis
+- look at the data. 
+
+```{r test on small set}
+df <- whole[,c(1:12,60)]
+summary(df)
+library(plyr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+df$dmy_hm <- dmy_hm(df$cvtd_timestamp)
+df$date <- date(df$dmy_hm)
+mini <- df %>% 
+        filter(date == date("2011/12/05")) %>%
+        filter(user_name == "carlitos") %>%
+        filter(classe=="A")
+        
+```
+- the data consists of movement from several users, each practising a certain form (=classe)
+
+## Subsetting the data
+- the data is too large, so I will subset randomly to train with random forest.
+
+```{r subset data}
+df <- whole[,-c(1:7)]
+df <- df %>% group_by(classe) %>% sample_n(size = 200)
+summary(df$classe)
+```
+
+- cut the data into partitions
+```{r test and train}
+inTrain <- createDataPartition(y=df$classe,p=.7,list=F)
+training <- df[inTrain,]
+testing <- df[-inTrain,]
+```
+
+## Modelling
+- I will use random forest as the model, as it is known to have good prediciton results. 
+
+```{r rf, cache=TRUE}
+modRF <- train(classe ~ ., data=training, method="rf",
+               tfControl=trainControl(method = "cv"),
+               preProcess = c("center","scale"))
+predRF <- predict(modRF, testing)
+caret::confusionMatrix(testing$classe, predRF)
+
+predict(modRF, validation)
+```
+
+## Boosting
+- class
+```{r gbm, cache=TRUE}
+modGBM <- train(classe ~.,
+        method="gbm",data=training,verbose=F)
+
+print(modGBM)
+predGBM <- predict(modGBM, testing)
+caret::confusionMatrix(testing$classe, predGBM)
+
+predict(modGBM, validation)
+
+```
+
+- random forest has a better result than boosting, so I will use random forest to predict. 
+
+
+```{r stacking rf and boosting,eval=FALSE,echo=FALSE,results='hide'}
+predDF <- data.frame(predRF,predGBM, classe=testing$classe)
+combModFit <- train(classe ~ .,method="gbm",data=predDF, verbose=F)
+combPred <- predict(combModFit, predDF)
+
+confusionMatrix(testing$classe, combPred)
+```
+
+- B A A A A E D D A A B C B A E E A B B B (2000/RF)
+- B A C A A E D D A A C C B A E E A B B B (1000/RF)
+- B A C C C E D B A A C C B A E E A B B B (1000/GBM)
+
